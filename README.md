@@ -1,6 +1,6 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
-<i>Turns any world object into a fully controllable virtual cursor. Driven entirely through events — movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad, keyboard, touch, and automated input with configurable acceleration, deceleration, and max speed.</i> <br>
+<i>Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad, keyboard, touch, and automated input with configurable acceleration, deceleration, and max speed.</i> <br>
 ### Version 1.0.0.0
 
 [<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.0.0.c3addon/salmanshh_virtual_cursor-1.0.0.0.c3addon)
