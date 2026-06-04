@@ -1,0 +1,587 @@
+# Virtual Cursor Guide
+
+Virtual Cursor turns any world object into a lightweight, event-driven cursor that can move, steer, collide, home in on targets, and react to interact inputs. It is built for developers who want a controllable pointer-like object without writing a full custom movement system from scratch.
+
+## Table of Contents
+
+1. [Scenarios Where This Addon Excels](#1-scenarios-where-this-addon-excels)
+2. [Core Concepts](#2-core-concepts)
+3. [Project Setup](#3-project-setup)
+4. [Plugin Properties](#4-plugin-properties)
+5. [Movement and Steering](#5-movement-and-steering)
+6. [Input and Interact Events](#6-input-and-interact-events)
+7. [Homing, Solids, and Boundaries](#7-homing-solids-and-boundaries)
+8. [Default Controls and Simulated Input](#8-default-controls-and-simulated-input)
+9. [Mouse Follow and Smooth Cursor Motion](#9-mouse-follow-and-smooth-cursor-motion)
+10. [Actions Reference](#10-actions-reference)
+11. [Conditions Reference](#11-conditions-reference)
+12. [Expressions Reference](#12-expressions-reference)
+13. [System Use Cases](#13-system-use-cases)
+14. [Game Use Cases](#14-game-use-cases)
+15. [Other Game Use Cases](#15-other-game-use-cases)
+16. [Debugger](#16-debugger)
+17. [Tips and Common Mistakes](#17-tips-and-common-mistakes)
+
+## 1. Scenarios Where This Addon Excels
+
+- **Mouse guided AI cursor**: Make an object follow the mouse, a touch point, or a screen-space target with smooth motion.
+- **Point-and-click interaction**: Use the cursor as a visible pointer for menus, selectors, radar, or tooltips.
+- **Boss arena navigation**: Use homing, solids, and layout clamps to create a chase or dodge cursor that reacts to walls and targets.
+- **Top-down camera pointer**: Use the cursor as the movement source for a player marker, aim reticle, or selection cursor.
+- **Automated motion tests**: Use Simulate Control and Simulate Axis for event-driven input without relying on actual keyboard input.
+- **Physics-like movement with clean control**: Use acceleration, deceleration, and sliding properties to make movement feel responsive without custom physics code.
+
+## 2. Core Concepts
+
+### The problem this addon solves
+
+You can make an object move with built-in platform movement, but you often still need custom logic for smooth pointer motion, steering toward targets, collision push-out, and event-driven input. Virtual Cursor packages those pieces into one behavior so you can focus on event logic instead of writing the same movement code over and over.
+
+### Key design decisions
+
+- Movement is event-driven. The object moves through ACE actions and the runtime tick loop.
+- Input can come from keyboard, simulated actions, touch, or script-driven axis values.
+- Movement is controllable by direction mode, sliding, acceleration, and solid collision.
+- The behavior keeps motion state separate from the visible object position, which makes save/load and event handling simpler.
+- The ACE surface is script-friendly, so movement values, homing state, and utility expressions can be read from events or custom JavaScript logic.
+
+### Key concepts at a glance
+
+| Term | What it means |
+|---|---|
+| Axis | A normalized move direction such as left, right, up, or down. |
+| Velocity | The current movement speed vector used to move the object each frame. |
+| Direction mode | A rule that limits movement to vertical, horizontal, four-way, or full eight-way. |
+| Homing | A target-seeking behavior that pulls the object toward registered targets. |
+| Solid collision | A push-out system that prevents the cursor from passing through solid instances. |
+
+## 3. Project Setup
+
+1. Add the behavior to any object you want to act as a cursor.
+2. Set the object to a world object with a visible sprite or shape.
+3. Use one of these input paths:
+   - Default Controls for arrow keys
+   - Simulate Control or Simulate Axis for event-sheet input
+   - Move Toward or Simulate Mouse for mouse-like follow
+4. Add a collision object if you want walls or solids to block movement.
+
+Example start setup:
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Max Speed 500
+  Action: Virtual Cursor -> Set Acceleration 1800
+  Action: Virtual Cursor -> Set Deceleration 2400
+  Action: Virtual Cursor -> Set Direction Mode 8 Directions
+```
+
+Simple mouse-follow setup:
+
+```text
+Event: Every tick
+  Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
+```
+
+## 4. Plugin Properties
+
+| Property | Type | Default | Description |
+|---|---|---:|---|
+| Max Speed | Float | 600 | Maximum movement speed in pixels per second. |
+| Acceleration | Float | 1800 | How quickly the cursor ramps up speed while moving. |
+| Deceleration | Float | 2400 | How quickly the cursor slows down when input stops. |
+| Directions | Combo | 8 Directions | Restricts motion to Up/Down, Left/Right, 4-way, or 8-way. |
+| Allow Sliding | Check | true | Lets the cursor slide along walls instead of stopping on contact. |
+| Default Controls | Check | true | Enables arrow key movement when true. |
+| Enabled | Check | true | Turns the behavior on or off. |
+
+## 5. Movement and Steering
+
+This is the main feature set for cursor motion. It covers acceleration, deceleration, direct positioning, velocity changes, and direction limiting.
+
+Use it when you want the cursor to feel like a pointer or a small moving object rather than a teleporting marker.
+
+Example: gradual acceleration and stop behavior:
+
+```text
+Event: Every tick
+  Condition: Keyboard -> Key Down Left
+  Action: Virtual Cursor -> Set Velocity (-200, 0)
+```
+
+Example: force a top-down four-way turn:
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Direction Mode 4 Directions
+```
+
+## 6. Input and Interact Events
+
+The Input category gives you named interact buttons that work independently of the movement axis. This is useful for one object that needs many different event triggers, such as a cursor that selects, grabs, or confirms.
+
+Example of a simple press and release flow:
+
+```text
+Event: On key pressed
+  Action: Virtual Cursor -> Press Interact "select"
+
+Event: Virtual Cursor -> On Interact Pressed "select"
+  Action: Spawn object at cursor position
+```
+
+Example of a held-state check:
+
+```text
+Event: Every tick
+  Condition: Virtual Cursor -> Is Interact Held "fire"
+  Action: Shoot bullet toward Virtual Cursor.MovingAngle
+```
+
+If you want the bullet to follow the current motion vector instead of the object’s facing, use the new MovingAngle expression together with your normal bullet spawning logic.
+
+## 7. Homing, Solids, and Boundaries
+
+Use homing for target-seeking motion, solids for collision, and constraints for layout boundaries.
+
+Example of homing toward a target:
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Homing Enabled true
+  Action: Virtual Cursor -> Set Homing Radius 160
+  Action: Virtual Cursor -> Set Homing Strength 0.6
+  Action: Virtual Cursor -> Add Homing Target EnemyGroup
+```
+
+Example of walls and push-out:
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Add Solid WallGroup
+  Action: Virtual Cursor -> Set Solid Collision true
+```
+
+## 8. Default Controls and Simulated Input
+
+The default arrow key path is great for quick prototypes. The simulated path is best when the inputs are coming from events, AI, or a custom control system.
+
+Example of switching input modes:
+
+```text
+Event: On key pressed "F"
+  Action: Virtual Cursor -> Set Default Controls false
+
+Event: On key pressed "G"
+  Action: Virtual Cursor -> Set Default Controls true
+```
+
+Example of simulated one-tick directional input:
+
+```text
+Event: Every tick
+  Action: Virtual Cursor -> Simulate Control Up
+  Action: Virtual Cursor -> Simulate Control Right
+```
+
+## 9. Mouse Follow and Smooth Cursor Motion
+
+For a natural pointer feel, use Move Toward for direct target following or Simulate Mouse for smooth easing.
+
+Example of a smooth mouse cursor:
+
+```text
+Event: Every tick
+  Action: Virtual Cursor -> Simulate Mouse (Mouse.X, Mouse.Y, 0.15)
+```
+
+Use a lower smoothing value for a more delayed, floaty feel and a higher value for a snappier cursor.
+
+## 10. Actions Reference
+
+### Input
+
+| Action | Description |
+|---|---|
+| Press Interact | Marks an interact ID as held for the current frame or until released. |
+| Release Interact | Clears the held state for a named interact ID. |
+
+### Movement
+
+| Action | Description |
+|---|---|
+| Set Position | Teleports the cursor to an exact X and Y location. |
+| Set Velocity | Applies an instant velocity vector. |
+| Stop Movement | Forces the cursor to halt. |
+| Set Max Speed | Changes the top speed of the cursor. |
+| Set Acceleration | Changes how fast the cursor ramps toward max speed. |
+| Set Deceleration | Changes how fast the cursor slows down when input stops. |
+| Move Toward Position | Points the cursor toward a target coordinate. |
+
+### Homing
+
+| Action | Description |
+|---|---|
+| Set Homing Enabled | Turns target seeking on or off. |
+| Add Homing Target | Registers a target instance to home toward. |
+| Remove Homing Target | Removes one target from the homing set. |
+| Clear Homing Targets | Removes all homing targets. |
+| Set Homing Radius | Changes the distance at which targets are considered active. |
+| Set Homing Strength | Changes how strongly the cursor is pulled toward targets. |
+| Set Homing Mode | Switches between Steer (gentle pull) and Snap (instant lock-on) behavior. |
+
+### Solids
+
+| Action | Description |
+|---|---|
+| Set Solid Collision | Turns built-in solid collision on or off. |
+| Add Solid | Adds an instance as a solid blocker. |
+| Remove Solid | Removes one solid blocker. |
+| Clear Solids | Clears all custom solid blockers. |
+| Set Allow Sliding | Enables or disables sliding on contact. |
+
+### State
+
+| Action | Description |
+|---|---|
+| Set Enabled | Enables or disables the cursor behavior. |
+| Set Constrain To Layout | Enables or disables layout boundary clamping. |
+| Set Constraint Bounds | Sets a custom clamp box for the cursor. |
+| Set Direction Mode | Changes the allowed movement axes. |
+| Set Default Controls | Enables or disables arrow-key input. |
+
+### Simulate Controls
+
+| Action | Description |
+|---|---|
+| Simulate Control | Applies a one-tick directional input for event-sheet movement. |
+| Simulate Axis | Applies raw X and Y axis input for one tick. |
+| Simulate Interact | Presses and releases a named interact ID from events. |
+| Simulate Mouse | Smoothly follows a target position with easing. |
+
+## 11. Conditions Reference
+
+| Condition | Description |
+|---|---|
+| Is Interact Held | Returns whether the named interact ID is currently held. |
+| On Interact Pressed | Triggers when a named interact input is pressed. |
+| On Interact Released | Triggers when a named interact input is released. |
+| Is Moving | Returns true while the cursor currently has velocity. |
+| Is Blocked | Returns true when the cursor hit a solid blocker this tick. |
+| On Solid Hit | Triggers when the cursor collides with a solid. |
+| Is Enabled | Returns whether the behavior is enabled. |
+| Is In Homing Range | Returns true while a homing target is in range. |
+| On Homing Target Entered | Triggers when a homing target enters range. |
+| On Homing Target Exited | Triggers when a homing target leaves range. |
+| On Homing Snapped | Triggers when homing mode is set to snap. |
+| On Layout Edge Hit | Triggers when the cursor touches the layout boundary. |
+
+## 12. Expressions Reference
+
+| Expression | Returns | Description |
+|---|---|---|
+| CursorX | Number | Current cursor X position. |
+| CursorY | Number | Current cursor Y position. |
+| VelocityX | Number | Current horizontal velocity. |
+| VelocityY | Number | Current vertical velocity. |
+| Speed | Number | Current total speed. |
+| MovingAngle | Number | Current movement angle in degrees based on the velocity vector. |
+| AxisX | Number | Current movement axis X value. |
+| AxisY | Number | Current movement axis Y value. |
+| HomingTargetUID | Number | UID of the nearest homing target. |
+| HomingTargetDist | Number | Distance to the nearest homing target. |
+| CountHomingTargets | Number | Number of currently registered targets. |
+| SolidUID | Number | UID of the most recent solid hit. |
+| CountSolids | Number | Number of registered solid blockers. |
+| ConstraintLeft / Top / Right / Bottom | Number | The current clamp box values. |
+
+## 13. System Use Cases
+
+### Registration
+
+This system keeps target and solid lists in memory so the cursor can react to them later.
+
+**Scenario:** You want one cursor to home toward a moving enemy while ignoring other objects.
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Add Homing Target EnemyGroup
+  Action: Virtual Cursor -> Add Solid WallGroup
+```
+
+**Tip:** Clear the lists when a level ends or the object is destroyed.
+
+### World State
+
+This system handles position, velocity, and layout clamping.
+
+**Scenario:** You want the cursor to stop at the edge of the layout.
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Constrain To Layout true
+  Action: Virtual Cursor -> Set Constraint Bounds (0, 0, LayoutWidth, LayoutHeight)
+```
+
+### Evaluation
+
+This system reads motion state and triggers relevant events.
+
+**Scenario:** You want to fire only while the cursor is moving.
+
+```text
+Event: Every tick
+  Condition: Virtual Cursor -> Is Moving
+  Action: Update trail effect
+```
+
+### Save and Load
+
+This system resets transient input and velocity state when the game is restored.
+
+**Scenario:** You want save/load to keep the cursor position, not its temporary movement memory.
+
+```text
+Event: On save game
+  Action: Save current position
+
+Event: On load game
+  Action: Restore position
+```
+
+## 14. Game Use Cases
+
+1. **Simple mouse pointer**  
+   **Scenario:** You want a visible cursor that follows the mouse and stops at the pointer.  
+   **Event sheet:**
+   ```text
+   Event: Every tick
+     Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
+   ```
+
+2. **Smooth aim reticle**  
+   **Scenario:** You want an aim cursor that eases gently instead of snapping.  
+   **Event sheet:**
+   ```text
+   Event: Every tick
+     Action: Virtual Cursor -> Simulate Mouse (Touch.X, Touch.Y, 0.18)
+   ```
+
+3. **Four-way dungeon cursor**  
+   **Scenario:** You want the cursor to move only on the four main axes.  
+   **Event sheet:**
+   ```text
+   Event: On start of layout
+     Action: Virtual Cursor -> Set Direction Mode 4 Directions
+   ```
+
+4. **Horizontal platform selector**  
+   **Scenario:** You want the cursor to move left and right only.  
+   **Event sheet:**
+   ```text
+   Event: On start of layout
+     Action: Virtual Cursor -> Set Direction Mode Left & Right
+   ```
+
+5. **Vertical menu cursor**  
+   **Scenario:** You want the cursor to move up and down only.  
+   **Event sheet:**
+   ```text
+   Event: On start of layout
+     Action: Virtual Cursor -> Set Direction Mode Up & Down
+   ```
+
+6. **Cursor that pushes against walls**  
+   **Scenario:** You want the cursor to slide along walls rather than stop instantly.  
+   **Event sheet:**
+   ```text
+   Event: On start of layout
+     Action: Virtual Cursor -> Set Allow Sliding true
+     Action: Virtual Cursor -> Add Solid WallGroup
+   ```
+
+7. **AI chase cursor**  
+   **Scenario:** You want an enemy cursor to chase the player with homing.  
+   **Event sheet:**
+   ```text
+   Event: On start of layout
+     Action: Virtual Cursor -> Set Homing Enabled true
+     Action: Virtual Cursor -> Set Homing Radius 200
+     Action: Virtual Cursor -> Add Homing Target Player
+   ```
+
+8. **Target lock cursor**  
+   **Scenario:** You want the cursor to snap to a target when it gets close.  
+   **Event sheet:**
+   ```text
+   Event: Every tick
+     Action: Virtual Cursor -> Set Homing Mode Snap
+   ```
+
+9. **Button press selection**  
+   **Scenario:** You want a named interact button to trigger a menu choice.  
+   **Event sheet:**
+   ```text
+   Event: Virtual Cursor -> On Interact Pressed "select"
+     Action: Open menu panel
+   ```
+
+10. **Hold-to-drag cursor**  
+    **Scenario:** You want the cursor to keep a button held for a drag action.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Condition: Virtual Cursor -> Is Interact Held "drag"
+      Action: Move selected object with cursor
+    ```
+
+11. **Auto-run test cursor**  
+    **Scenario:** You want to simulate movement from the event sheet without real keyboard input.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Simulate Control Right
+    ```
+
+12. **Diagonal movement test**  
+    **Scenario:** You want to combine two directions in one frame for a diagonal simulation.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Simulate Control Up
+      Action: Virtual Cursor -> Simulate Control Right
+    ```
+
+13. **Touch screen pointer**  
+    **Scenario:** You want the cursor to follow the player finger.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Simulate Mouse (Touch.X, Touch.Y, 0.20)
+    ```
+
+14. **Radar ping cursor**  
+    **Scenario:** You want a small pointer to sweep toward enemies in range.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Set Homing Radius 120
+      Action: Virtual Cursor -> Add Homing Target EnemyGroup
+    ```
+
+15. **Boss arena dodge cursor**  
+    **Scenario:** You want the cursor to dodge hazards while tracking the boss.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Set Max Speed 500
+      Action: Virtual Cursor -> Move toward position (Boss.X, Boss.Y)
+    ```
+
+16. **Safe layout clamp**  
+    **Scenario:** You want the cursor to remain inside the play area.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Constrain To Layout true
+    ```
+
+17. **Custom clamp box**  
+    **Scenario:** You want a HUD or mini-map area to behave like a window.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Constraint Bounds (100, 80, 700, 420)
+    ```
+
+18. **Stop on collision**  
+    **Scenario:** You want the cursor to stop if it hits a solid.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Allow Sliding false
+      Action: Virtual Cursor -> Add Solid WallGroup
+    ```
+
+19. **Interactive inventory cursor**  
+    **Scenario:** You want a cursor that highlights inventory slots and confirms them.  
+    **Event sheet:**
+    ```text
+    Event: Virtual Cursor -> On Interact Pressed "select"
+      Action: Highlight slot under cursor
+    ```
+
+20. **Auto-snap to nearest pickup**  
+    **Scenario:** You want the cursor to seek the nearest collectible.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Set Homing Enabled true
+      Action: Virtual Cursor -> Add Homing Target PickupGroup
+    ```
+
+21. **Level editor prototype**  
+    **Scenario:** You want to simulate pathing and collision quickly before using a full player object.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Simulate Axis (InputAxisX, InputAxisY)
+    ```
+
+22. **Debug-friendly cursor**  
+    **Scenario:** You want to inspect movement state while tuning feel.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Open debugger for the cursor behavior
+    ```
+
+### Other game use cases
+
+- **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
+- **Twin-stick shooter**: Use Simulate Axis or Simulate Control to drive a cursor-like reticle from analog input.
+- **Rogue-like**: Use homing and solid push-out for a targeting cursor and hazard avoidance.
+- **Puzzle game**: Use the cursor as a drag-and-place helper for object selection and snapping.
+- **Tower defense**: Use homing and movement control for a aim reticle or planned path preview.
+- **Visual novel**: Use the cursor for dialogue choices, hovering highlights, and click-through selection.
+- **Top-down RPG**: Use the cursor for world interaction, object targeting, and UI navigation.
+- **Arcade shooter**: Use smooth mouse follow for an on-screen pointer or auto-aim helper.
+- **Strategy game**: Use the cursor to pick units, display range markers, and confirm commands.
+- **Physics toy**: Use sliding and collision to create playful pointer motion around obstacles.
+- **Menu prototype**: Use the cursor for selection handles, radial menus, and hover states.
+- **Accessibility tool**: Use default controls and Simulate Control to build custom input paths without changing the behavior itself.
+
+## 15. Other Game Use Cases
+
+- **Stealth game**: Use the cursor as a soft, non-lethal detection point that can be hidden behind cover.
+- **Rhythm game**: Use Simulate Control to create timed directional cues and beat-matched cursor movement.
+- **Educational app**: Use the behavior as a simple tutorial cursor to guide learners through a screen.
+- **Simulation game**: Use the cursor to represent a drone, pointer, or sensor head moving around obstacles.
+- **Builder game**: Use the cursor for snapping, placing, and dragging layout objects.
+- **Sports game**: Use the cursor on the screen to aim shots, choose tactics, or mark targets.
+- **Narrative puzzle**: Use move-to-target logic for object inspection and puzzle hints.
+- **Crafting game**: Use cursor motion and interact events for item selection and hovering tooltips.
+- **Multiplayer lobby**: Use the cursor as a shared pointer for player selection and menu interaction.
+- **Prototype game**: Use the behavior as the fastest way to make a working cursor without writing custom movement code.
+
+## 16. Debugger
+
+The debugger shows live values for the behavior so you can tune movement without guessing. Open the debugger from the Construct debugger panel while the layout is running.
+
+The main debugger view shows:
+
+- Enabled and Default Controls
+- Direction Mode and Allow Sliding
+- Max Speed, Acceleration, and Deceleration
+- Current speed, velocity, and axis values
+- Last interact pressed and released IDs
+
+## 17. Tips and Common Mistakes
+
+- Use the correct direction mode for the input path you want. Four-way and eight-way modes behave differently when two directions are held at once.
+- Simulate Control and Simulate Axis are one-tick inputs. If you want them to stay active, call them every tick.
+- Move Toward and Simulate Mouse are best for pointer-like following, not for exact teleporting.
+- If you want the cursor to stop on walls, set Allow Sliding to false.
+- If you want arrow keys to be active, keep Default Controls enabled or toggle it from the event sheet.
+- If a target is no longer valid, remove it from the homing list before it causes stale state.
+- Use MovingAngle when you need bullets, effects, or AI to face the cursor’s current motion direction rather than its sprite orientation.
+- The current ACE set is script-friendly, so you can read motion state from JavaScript or mix event-sheet logic with custom runtime code.

@@ -1,117 +1,606 @@
 {
   "languageTag": "en-US",
-  "fileDescription": "Strings for sample_addon.",
+  "fileDescription": "Strings for salmanshh_virtual_cursor.",
   "text": {
-    "plugins": {
-      "sample_addon": {
-        "name": "Sample Addon",
-        "description": "Description",
+    "behaviors": {
+      "salmanshh_virtual_cursor": {
+        "name": "Virtual Cursor",
+        "description": "Turns any world object into a fully controllable virtual cursor. Driven entirely through events — movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad, keyboard, touch, and automated input with configurable acceleration, deceleration, and max speed.",
         "help-url": "https://www.construct.net",
         "aceCategories": {
-          "Ace_Folders_In_Category_Folder": "Ace_Folders_In_Category_Folder",
-          "Aces_Files_In_Category_Folder": "Aces_Files_In_Category_Folder",
-          "Aces_In_Single_File": "Aces_In_Single_File"
+          "Homing": "Homing",
+          "Input": "Input",
+          "Movement": "Movement",
+          "Simulate": "Simulate Controls",
+          "Solids": "Solids",
+          "State": "State"
         },
-        "properties": {},
+        "properties": {
+          "maxSpeed": {
+            "name": "Max Speed",
+            "desc": "Maximum cursor movement speed in pixels per second."
+          },
+          "acceleration": {
+            "name": "Acceleration",
+            "desc": "Rate of acceleration toward max speed, in pixels per second squared."
+          },
+          "deceleration": {
+            "name": "Deceleration",
+            "desc": "Rate of deceleration when axis input is zero, in pixels per second squared."
+          },
+          "directionMode": {
+            "name": "Directions",
+            "desc": "Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis; 8 Directions allows full free movement.",
+            "items": {
+              "up_down": "Up & Down",
+              "left_right": "Left & Right",
+              "four": "4 Directions",
+              "eight": "8 Directions"
+            }
+          },
+          "allowSliding": {
+            "name": "Allow Sliding",
+            "desc": "When enabled, the cursor slides along solid obstacles rather than stopping on contact. When disabled, all velocity is zeroed on any solid hit."
+          },
+          "defaultControls": {
+            "name": "Default Controls",
+            "desc": "If enabled, arrow keys control movement. Otherwise, use the Simulate Control actions to drive movement from the event sheet."
+          },
+          "enabled": {
+            "name": "Enabled",
+            "desc": "Whether the behavior is initially enabled or disabled."
+          }
+        },
         "actions": {
-          "ActionCombo": {
-            "list-name": "Sample Action Combo",
-            "display-text": "Sample Action Combo {0}",
-            "description": "This is a sample action",
+          "AddHomingTarget": {
+            "list-name": "Add Homing Target",
+            "display-text": "Add {0} as homing target",
+            "description": "Registers picked instances as homing targets the cursor steers toward.",
             "params": {
-              "param1": {
-                "name": "Param1",
-                "desc": "This is a sample param",
+              "object": {
+                "name": "Object",
+                "desc": "Object instances to add as homing targets"
+              }
+            }
+          },
+          "ClearHomingTargets": {
+            "list-name": "Clear Homing Targets",
+            "display-text": "Clear all homing targets",
+            "description": "Removes all homing targets and resets the in-range state.",
+            "params": {}
+          },
+          "RemoveHomingTarget": {
+            "list-name": "Remove Homing Target",
+            "display-text": "Remove {0} as homing target",
+            "description": "Removes picked instances of an object from the homing targets list.",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "Object instances to remove from homing targets"
+              }
+            }
+          },
+          "SetHomingEnabled": {
+            "list-name": "Set Homing Enabled",
+            "display-text": "Set homing {0}",
+            "description": "Enables or disables the homing magnet system.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether homing is active"
+              }
+            }
+          },
+          "SetHomingMode": {
+            "list-name": "Set Homing Mode",
+            "display-text": "Set homing mode to {0}",
+            "description": "Steer pulls the cursor gently toward the nearest target; Snap locks it directly on the target.",
+            "params": {
+              "mode": {
+                "name": "Mode",
+                "desc": "Steer = gentle pull, Snap = instant lock-on",
                 "items": {
-                  "test": "test",
-                  "test2": "test2"
+                  "steer": "Steer (pull)",
+                  "snap": "Snap (lock)"
                 }
               }
             }
           },
-          "Action": {
-            "list-name": "Sample Action",
-            "display-text": "Sample Action {0}",
-            "description": "This is a sample action",
+          "SetHomingRadius": {
+            "list-name": "Set Homing Radius",
+            "display-text": "Set homing radius to {0}",
+            "description": "Sets the homing detection radius in pixels.",
             "params": {
-              "param1": {
-                "name": "Param1",
-                "desc": "This is a sample param"
+              "radius": {
+                "name": "Radius",
+                "desc": "Homing detection radius in pixels"
               }
             }
           },
-          "AsyncAction": {
-            "list-name": "Sample Action Async",
-            "display-text": "Sample Action Async",
-            "description": "This is a sample action",
+          "SetHomingStrength": {
+            "list-name": "Set Homing Strength",
+            "display-text": "Set homing strength to {0}",
+            "description": "Sets the pull strength used by Steer mode (0–1). Snap mode ignores this value.",
+            "params": {
+              "strength": {
+                "name": "Strength",
+                "desc": "Homing pull strength (0 to 1)"
+              }
+            }
+          },
+          "PressInteract": {
+            "list-name": "Press Interact",
+            "display-text": "Press interact {0}",
+            "description": "Marks the named interact input as held and fires On Interact Pressed. Use a consistent ID string (e.g. \"interact\", \"fire\", \"jump\") to distinguish between multiple buttons.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier (e.g. \"interact\", \"fire\", \"jump\")"
+              }
+            }
+          },
+          "ReleaseInteract": {
+            "list-name": "Release Interact",
+            "display-text": "Release interact {0}",
+            "description": "Clears the named interact input held state and fires On Interact Released. The ID must match the one used in Press Interact.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier — must match the ID used in Press Interact"
+              }
+            }
+          },
+          "SetAcceleration": {
+            "list-name": "Set Acceleration",
+            "display-text": "Set acceleration to {0}",
+            "description": "Sets how fast the cursor speeds up when input is held, in px/s².",
+            "params": {
+              "rate": {
+                "name": "Acceleration",
+                "desc": "Acceleration rate (pixels/sec²)"
+              }
+            }
+          },
+          "SetDeceleration": {
+            "list-name": "Set Deceleration",
+            "display-text": "Set deceleration to {0}",
+            "description": "Sets how fast the cursor slows down when no input is held, in px/s².",
+            "params": {
+              "rate": {
+                "name": "Deceleration",
+                "desc": "Deceleration rate (pixels/sec²)"
+              }
+            }
+          },
+          "SetMaxSpeed": {
+            "list-name": "Set Max Speed",
+            "display-text": "Set max speed to {0}",
+            "description": "Sets the maximum movement speed in pixels per second.",
+            "params": {
+              "speed": {
+                "name": "Max Speed",
+                "desc": "Maximum movement speed (pixels/sec)"
+              }
+            }
+          },
+          "SetPosition": {
+            "list-name": "Set Position",
+            "display-text": "Set position to ({0}, {1})",
+            "description": "Instantly teleports the cursor object to the given position.",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "Target X position"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Target Y position"
+              }
+            }
+          },
+          "SetVelocity": {
+            "list-name": "Set Velocity",
+            "display-text": "Set velocity to ({0}, {1})",
+            "description": "Directly sets the cursor velocity in pixels per second.",
+            "params": {
+              "velX": {
+                "name": "Velocity X",
+                "desc": "Horizontal velocity (pixels/sec)"
+              },
+              "velY": {
+                "name": "Velocity Y",
+                "desc": "Vertical velocity (pixels/sec)"
+              }
+            }
+          },
+          "MoveToward": {
+            "list-name": "Move toward position",
+            "display-text": "Move toward ({0}, {1})",
+            "description": "Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse.",
+            "params": {
+              "targetX": {
+                "name": "Target X",
+                "desc": "X coordinate to move toward"
+              },
+              "targetY": {
+                "name": "Target Y",
+                "desc": "Y coordinate to move toward"
+              }
+            }
+          },
+          "SimulateAxis": {
+            "list-name": "Simulate Axis",
+            "display-text": "Simulate axis ({0}, {1})",
+            "description": "Intended for analog sticks and virtual joysticks.",
+            "params": {
+              "x": {
+                "name": "Axis X",
+                "desc": "Horizontal axis value. Typical range -1 to 1; values outside are normalised down to unit length."
+              },
+              "y": {
+                "name": "Axis Y",
+                "desc": "Vertical axis value. Typical range -1 to 1; values outside are normalised down to unit length."
+              }
+            }
+          },
+          "SimulateControl": {
+            "list-name": "Simulate Control",
+            "display-text": "Simulate control {0}",
+            "description": "Moves the cursor in a direction this tick only. Must be called every tick it should remain held.",
+            "params": {
+              "direction": {
+                "name": "Direction",
+                "desc": "Direction to simulate",
+                "items": {
+                  "up": "Up",
+                  "down": "Down",
+                  "left": "Left",
+                  "right": "Right"
+                }
+              }
+            }
+          },
+          "SimulateInteract": {
+            "list-name": "Simulate Interact",
+            "display-text": "Simulate interact [{0}]",
+            "description": "Fires On Interact Pressed and On Interact Released for the given ID within the same frame. Does not set the held state. Use Press Interact + Release Interact separately when held state is needed.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier"
+              }
+            }
+          },
+          "SimulateMouse": {
+            "list-name": "Simulate mouse",
+            "display-text": "Simulate mouse at ({0}, {1}) smoothing {2}",
+            "description": "Smoothly moves the cursor toward a target position each tick. Unlike Move Toward, uses exponential velocity smoothing for a natural ease-in and ease-out with no sudden stops. Call every tick.",
+            "params": {
+              "targetX": {
+                "name": "Target X",
+                "desc": "X coordinate to follow"
+              },
+              "targetY": {
+                "name": "Target Y",
+                "desc": "Y coordinate to follow"
+              },
+              "smoothing": {
+                "name": "Smoothing",
+                "desc": "Follow responsiveness from 0 (frozen) to 1 (instant). Values around 0.1–0.3 feel like a smooth mouse cursor."
+              }
+            }
+          },
+          "AddSolid": {
+            "list-name": "Add Solid",
+            "display-text": "Add {0} as solid",
+            "description": "Registers picked instances as solids the cursor is pushed out of.",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "Object instances to add as solids"
+              }
+            }
+          },
+          "ClearSolids": {
+            "list-name": "Clear Solids",
+            "display-text": "Clear all solids",
+            "description": "Removes all explicit solids from the solids list.",
             "params": {}
           },
-          "SampleAction": {
-            "list-name": "Sample Action",
-            "display-text": "Sample Action {0}",
-            "description": "This is a sample action",
+          "RemoveSolid": {
+            "list-name": "Remove Solid",
+            "display-text": "Remove {0} as solid",
+            "description": "Removes picked instances of an object from the solids list.",
             "params": {
-              "param1": {
-                "name": "Param1",
-                "desc": "This is a sample param"
+              "object": {
+                "name": "Object",
+                "desc": "Object instances to remove from solids"
+              }
+            }
+          },
+          "SetAllowSliding": {
+            "list-name": "Set Allow Sliding",
+            "display-text": "Set allow sliding to {0}",
+            "description": "When enabled, only the velocity component perpendicular to the collision wall is zeroed — the cursor slides along the surface. When disabled, all velocity is zeroed on any solid hit.",
+            "params": {
+              "state": {
+                "name": "State",
+                "desc": "Enable or disable sliding along solid obstacles",
+                "items": {
+                  "enabled": "Enabled",
+                  "disabled": "Disabled"
+                }
+              }
+            }
+          },
+          "SetSolidCollision": {
+            "list-name": "Set Solid Collision",
+            "display-text": "Set solid collision {0}",
+            "description": "Enables or disables automatic solid collision for all Solid behavior instances.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether automatic solid collision is active"
+              }
+            }
+          },
+          "SetConstraintBounds": {
+            "list-name": "Set Constraint Bounds",
+            "display-text": "Set constraint bounds to ({0}, {1}) – ({2}, {3})",
+            "description": "Sets a custom constraint rectangle. Pass all zeros to reset to full layout bounds.",
+            "params": {
+              "left": {
+                "name": "Left",
+                "desc": "Left boundary in pixels"
+              },
+              "top": {
+                "name": "Top",
+                "desc": "Top boundary in pixels"
+              },
+              "right": {
+                "name": "Right",
+                "desc": "Right boundary in pixels"
+              },
+              "bottom": {
+                "name": "Bottom",
+                "desc": "Bottom boundary in pixels"
+              }
+            }
+          },
+          "SetConstrainToLayout": {
+            "list-name": "Set Constrain To Layout",
+            "display-text": "Set constrain to layout {0}",
+            "description": "Clamps cursor inside layout bounds and fires On Layout Edge Hit.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether layout clamping is active"
+              }
+            }
+          },
+          "SetDefaultControls": {
+            "list-name": "Set default controls",
+            "display-text": "Set default controls {0}",
+            "description": "Enable or disable the built-in arrow key controls. When disabled, use the Simulate Control action to drive movement from the event sheet.",
+            "params": {
+              "state": {
+                "name": "Enabled",
+                "desc": "Enable or disable default arrow key controls"
+              }
+            }
+          },
+          "SetDirectionMode": {
+            "list-name": "Set Direction Mode",
+            "display-text": "Set direction mode to {0}",
+            "description": "Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis per tick; 8 Directions allows full free movement.",
+            "params": {
+              "mode": {
+                "name": "Mode",
+                "desc": "Movement direction constraint",
+                "items": {
+                  "up_down": "Up & Down",
+                  "left_right": "Left & Right",
+                  "four": "4 Directions",
+                  "eight": "8 Directions"
+                }
+              }
+            }
+          },
+          "SetEnabled": {
+            "list-name": "Set Enabled",
+            "display-text": "Set enabled {0}",
+            "description": "Enables or disables the Virtual Cursor behavior.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether the behavior is active"
               }
             }
           }
         },
         "conditions": {
-          "ConditionCombo": {
-            "list-name": "Sample Condition",
-            "display-text": "Sample Condition {0}",
-            "description": "This is a sample condition",
-            "params": {
-              "param1": {
-                "name": "Param1",
-                "desc": "This is a sample param",
-                "items": {
-                  "TRUE": "True",
-                  "FALSE": "False"
-                }
-              }
-            }
-          },
-          "Condition": {
-            "list-name": "Sample Condition",
-            "display-text": "Sample Condition {0}",
-            "description": "This is a sample condition",
-            "params": {
-              "param1": {
-                "name": "Param1",
-                "desc": "This is a sample param"
-              }
-            }
-          },
-          "Trigger": {
-            "list-name": "Sample Trigger",
-            "display-text": "Sample Trigger",
-            "description": "This is a sample trigger",
+          "IsInHomingRange": {
+            "list-name": "Is In Homing Range",
+            "display-text": "Is in homing range",
+            "description": "True when at least one homing target is within the homing radius.",
             "params": {}
           },
-          "SampleCondition": {
-            "list-name": "Sample Condition",
-            "display-text": "Sample Condition",
-            "description": "This is a sample condition",
+          "OnHomingSnapped": {
+            "list-name": "On Homing Snapped",
+            "display-text": "On Homing Snapped",
+            "description": "Fires when the cursor teleports to a homing target in Snap mode.",
+            "params": {}
+          },
+          "OnHomingTargetEntered": {
+            "list-name": "On Homing Target Entered",
+            "display-text": "On Homing Target Entered",
+            "description": "Fires when the cursor enters the homing radius of a target.",
+            "params": {}
+          },
+          "OnHomingTargetExited": {
+            "list-name": "On Homing Target Exited",
+            "display-text": "On Homing Target Exited",
+            "description": "Fires when the cursor leaves the homing radius of all targets.",
+            "params": {}
+          },
+          "IsInteractHeld": {
+            "list-name": "Is Interact Held",
+            "display-text": "Interact {0} is held",
+            "description": "True while the named interact input is pressed and not yet released. Leave ID empty to check if any interact input is currently held.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier, or empty string to check if any interact is held"
+              }
+            }
+          },
+          "OnInteractPressed": {
+            "list-name": "On Interact Pressed",
+            "display-text": "On interact {0} pressed",
+            "description": "Fires when Press Interact is called for the given ID. Leave ID empty to fire for any interact press.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier to filter on, or leave empty to match any"
+              }
+            }
+          },
+          "OnInteractReleased": {
+            "list-name": "On Interact Released",
+            "display-text": "On interact {0} released",
+            "description": "Fires when Release Interact is called for the given ID. Leave ID empty to fire for any interact release.",
+            "params": {
+              "interactId": {
+                "name": "ID",
+                "desc": "Interact input identifier to filter on, or leave empty to match any"
+              }
+            }
+          },
+          "IsMoving": {
+            "list-name": "Is Moving",
+            "display-text": "Is moving",
+            "description": "True if the cursor has non-zero velocity.",
+            "params": {}
+          },
+          "OnLayoutEdgeHit": {
+            "list-name": "On Layout Edge Hit",
+            "display-text": "On Layout Edge Hit",
+            "description": "Fires when the cursor hits the layout boundary while constrained.",
+            "params": {}
+          },
+          "IsBlocked": {
+            "list-name": "Is Blocked",
+            "display-text": "Was blocked by a solid this tick",
+            "description": "True if the cursor was pushed out of a solid object this tick.",
+            "params": {}
+          },
+          "OnSolidHit": {
+            "list-name": "On Solid Hit",
+            "display-text": "On Solid Hit",
+            "description": "Fires when the cursor collides with a solid object and is pushed out.",
+            "params": {}
+          },
+          "IsEnabled": {
+            "list-name": "Is Enabled",
+            "display-text": "VectorCursor is enabled",
+            "description": "True if the VectorCursor behavior is currently active.",
             "params": {}
           }
         },
         "expressions": {
-          "Expression2": {
-            "translated-name": "Expression2",
-            "description": "Sample Expression",
+          "CountHomingTargets": {
+            "translated-name": "CountHomingTargets",
+            "description": "Returns the total number of registered homing targets.",
             "params": {}
           },
-          "Expression": {
-            "translated-name": "Expression",
-            "description": "Sample Expression",
+          "GetHomingTargetUIDByIndex": {
+            "translated-name": "GetHomingTargetUIDByIndex",
+            "description": "Returns the UID of a registered homing target by index, or -1.",
+            "params": {
+              "index": {
+                "name": "Index",
+                "desc": "Zero-based index into the homing targets list"
+              }
+            }
+          },
+          "HomingTargetDist": {
+            "translated-name": "HomingTargetDist",
+            "description": "Returns distance to the nearest in-range homing target, or -1.",
             "params": {}
           },
-          "SampleExpression": {
-            "translated-name": "SampleExpression",
-            "description": "This is a sample expression",
+          "HomingTargetUID": {
+            "translated-name": "HomingTargetUID",
+            "description": "Returns the UID of the nearest in-range homing target, or -1.",
+            "params": {}
+          },
+          "AxisX": {
+            "translated-name": "AxisX",
+            "description": "Returns the current horizontal axis input value (-1 to 1).",
+            "params": {}
+          },
+          "AxisY": {
+            "translated-name": "AxisY",
+            "description": "Returns the current vertical axis input value (-1 to 1).",
+            "params": {}
+          },
+          "CursorX": {
+            "translated-name": "CursorX",
+            "description": "Returns the current X position of the cursor object.",
+            "params": {}
+          },
+          "CursorY": {
+            "translated-name": "CursorY",
+            "description": "Returns the current Y position of the cursor object.",
+            "params": {}
+          },
+          "MovingAngle": {
+            "translated-name": "MovingAngle",
+            "description": "Returns the current movement angle in degrees based on the cursor's velocity vector.",
+            "params": {}
+          },
+          "Speed": {
+            "translated-name": "Speed",
+            "description": "Returns the cursor's current movement speed in pixels per second.",
+            "params": {}
+          },
+          "VelocityX": {
+            "translated-name": "VelocityX",
+            "description": "Returns the current horizontal velocity in pixels per second.",
+            "params": {}
+          },
+          "VelocityY": {
+            "translated-name": "VelocityY",
+            "description": "Returns the current vertical velocity in pixels per second.",
+            "params": {}
+          },
+          "CountSolids": {
+            "translated-name": "CountSolids",
+            "description": "Returns the total number of registered explicit solids.",
+            "params": {}
+          },
+          "SolidUID": {
+            "translated-name": "SolidUID",
+            "description": "Returns the UID of the last solid hit this tick, or -1.",
+            "params": {}
+          },
+          "ConstraintBottom": {
+            "translated-name": "ConstraintBottom",
+            "description": "Returns the bottom edge of the active constraint region.",
+            "params": {}
+          },
+          "ConstraintLeft": {
+            "translated-name": "ConstraintLeft",
+            "description": "Returns the left edge of the active constraint region.",
+            "params": {}
+          },
+          "ConstraintRight": {
+            "translated-name": "ConstraintRight",
+            "description": "Returns the right edge of the active constraint region.",
+            "params": {}
+          },
+          "ConstraintTop": {
+            "translated-name": "ConstraintTop",
+            "description": "Returns the top edge of the active constraint region.",
             "params": {}
           }
         }
