@@ -16,12 +16,7 @@ export const minConstructVersion = undefined;
 export const author        = "SalmanShh";
 export const website       = "https://www.construct.net";
 export const documentation = "https://www.construct.net";
-export const description   =
-  "Turns any world object into a fully controllable virtual cursor. " +
-  "Driven entirely through events, movement input, interact presses, homing " +
-  "magnet, and solid collision all exposed via ACEs. Supports gamepad, " +
-  "keyboard, touch, and automated input with configurable acceleration, " +
-  "deceleration, and max speed.";
+export const description   = "Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad,keyboard, touch, and automated input with configurable acceleration,deceleration, and max speed.";
 export const category = ADDON_CATEGORY.GENERAL;
 
 export const hasDomside = false;

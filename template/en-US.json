@@ -5,7 +5,7 @@
     "behaviors": {
       "salmanshh_virtual_cursor": {
         "name": "Virtual Cursor",
-        "description": "Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad, keyboard, touch, and automated input with configurable acceleration, deceleration, and max speed.",
+        "description": "Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad,keyboard, touch, and automated input with configurable acceleration,deceleration, and max speed.",
         "help-url": "https://www.construct.net",
         "aceCategories": {
           "Homing": "Homing",

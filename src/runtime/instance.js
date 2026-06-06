@@ -77,6 +77,12 @@ export default function (parentClass) {
       this._solidUID        = -1;    // UID of the solid that blocked this tick, or -1
       this._blockedThisTick = false; // True if push-out occurred this tick
 
+      // Slide-continuity state — smooths the contact normal across frames so a
+      // corner/tip can't flip the slide direction and cause stepping.
+      this._lastNX     = 0;   // last contact normal X
+      this._lastNY     = 0;   // last contact normal Y
+      this._contactAge = 99;  // frames since last contact; high = "fresh" contact
+
       // ── Layout constraint ─────────────────────────────────────────────────
       // When enabled, the cursor is clamped inside _constraintBounds each tick.
       // _constraintBounds=null means use the full layout dimensions.
@@ -309,18 +315,25 @@ export default function (parentClass) {
       const prevInRange = this._inHomingRange;
       this._updateHoming(prevInRange);
 
+      // Don't let homing keep shoving the cursor into a wall it's resting
+      // against — project the homing pull onto the wall surface instead.
+      // Uses last tick's contact state, which hasn't been reset yet here.
+      if (this._blockedThisTick && (this._lastNX !== 0 || this._lastNY !== 0)) {
+        const vn = this._velX * this._lastNX + this._velY * this._lastNY;
+        if (vn < 0) {
+          this._velX -= vn * this._lastNX;
+          this._velY -= vn * this._lastNY;
+        }
+      }
+
       // ── 3+4. Move and resolve solids with sliding ─────────────────────────
-      // Apply the full velocity move, then test whether only X, only Y, or
-      // both axes caused the overlap.  Zero the blocked axis and keep the free
-      // one so the cursor slides smoothly along any surface shape — including
-      // sloped/rotated solids — without a staircase pattern.
+      // Sub-stepped move + iterative MTV resolution.  Separating along the true
+      // minimum-translation axis (and blending the contact normal across frames)
+      // lets the cursor slide along any surface shape — including sloped/rotated
+      // solids — without the staircase/tip-flip stepping.
       this._blockedThisTick = false;
       this._solidUID        = -1;
-      const prevX = this.instance.x;
-      const prevY = this.instance.y;
-      this.instance.x += this._velX * dt;
-      this.instance.y += this._velY * dt;
-      this._resolveSolidSlide(prevX, prevY);
+      this._moveAndResolve();
 
       // ── 5. Layout boundary clamping ───────────────────────────────────────
       this._applyLayoutConstraint();
@@ -715,121 +728,123 @@ export default function (parentClass) {
     }
 
     /**
-     * Finds the edge of `solidInst` that best faces the point (px, py) and
-     * returns its unit tangent vector.  Used to project velocity onto the
-     * wall surface for accurate sliding on any rotation.
-     * @param {number} px
-     * @param {number} py
-     * @param {object} solidInst
-     * @returns {{tx:number,ty:number}|null}
+     * Sub-stepped move + iterative contact resolution.
+     * Advances the cursor by this tick's velocity in increments no larger than
+     * half its smallest dimension, resolving solids each step.  Small steps keep
+     * penetration shallow, which keeps the MTV normal stable at corners — the
+     * single biggest win against the tip wobble/stepping.
      */
-    _getSolidPoints(solidInst) {
-      return this._getInstancePoints(solidInst);
-    }
+    _moveAndResolve() {
+      const inst = this.instance;
+      const dt   = this.runtime.dt;
 
-    _getBestSlideTangent(px, py, solidInst) {
-      const pts = this._getSolidPoints(solidInst);
-      if (!pts || pts.length < 2) return null;
+      const dx   = this._velX * dt;
+      const dy   = this._velY * dt;
+      const dist = Math.hypot(dx, dy);
 
-      let bestScore = -Infinity;
-      let bestTX = 1;
-      let bestTY = 0;
+      const step  = Math.max(2, Math.min(inst.width, inst.height) * 0.5);
+      const steps = Math.max(1, Math.ceil(dist / step));
+      const sx = dx / steps;
+      const sy = dy / steps;
 
-      for (let i = 0; i < pts.length; i++) {
-        const a  = pts[i];
-        const b  = pts[(i + 1) % pts.length];
-        const ex = b.x - a.x;
-        const ey = b.y - a.y;
-        const el = Math.sqrt(ex*ex + ey*ey);
-        if (el < 1e-6) continue;
+      let anyBlocked = false;
 
-        const tx = ex / el;
-        const ty = ey / el;
-        let   nx = -ty;
-        let   ny =  tx;
+      for (let i = 0; i < steps; i++) {
+        const beforeX = inst.x;
+        const beforeY = inst.y;
+        inst.x += sx;
+        inst.y += sy;
 
-        // Vector from edge midpoint to the pre-move cursor position
-        const mx   = (a.x + b.x) * 0.5;
-        const my   = (a.y + b.y) * 0.5;
-        const dcx  = px - mx;
-        const dcy  = py - my;
-        const dcl  = Math.sqrt(dcx*dcx + dcy*dcy) || 1;
-
-        // Orient normal toward the cursor
-        if (nx*dcx + ny*dcy < 0) { nx = -nx; ny = -ny; }
-
-        const score = (nx*dcx + ny*dcy) / dcl;
-        if (score > bestScore) {
-          bestScore = score;
-          bestTX    = tx;
-          bestTY    = ty;
-        }
+        const status = this._resolveContacts(beforeX, beforeY);
+        if (status.blocked) anyBlocked = true;
+        if (status.stop) break; // sliding disabled and we hit something solid
       }
 
-      return { tx: bestTX, ty: bestTY };
+      if (anyBlocked) {
+        this._blockedThisTick = true;
+        this._trigger("OnSolidHit");   // fires once per tick
+      } else {
+        this._contactAge++;            // no contact this tick -> normal goes stale
+      }
     }
 
     /**
-     * Resolves a solid collision after the cursor has moved by testing X-only
-     * and Y-only moves separately.  Only the axis that caused the overlap is
-     * blocked; the other stays free so the cursor slides along any surface,
-     * including rotated/sloped solids, without stepping or jitter.
-     *
-     * @param {number} prevX - cursor X before this tick's movement
-     * @param {number} prevY - cursor Y before this tick's movement
+     * Resolves all blockers overlapping the cursor at its current position.
+     * Iterates so pushing out of one blocker into another is handled.  Separates
+     * along the TRUE minimum-translation axis (always clears the overlap) but
+     * slides along a normal blended with the recent contact normal, so a
+     * corner/tip can't flip the slide direction between frames.
+     * @param {number} beforeX - cursor X before this sub-step's move
+     * @param {number} beforeY - cursor Y before this sub-step's move
+     * @returns {{blocked:boolean, stop:boolean}}
      */
-    _resolveSolidSlide(prevX, prevY) {
+    _resolveContacts(beforeX, beforeY) {
       const inst = this.instance;
-      const dt   = this.runtime.dt;
-      const hit  = this._findSolidOverlap();
+      const MAX_PASSES = 4;
+      let blocked = false;
 
-      if (!hit) return;
+      for (let pass = 0; pass < MAX_PASSES; pass++) {
+        const hit = this._findSolidOverlap();
+        if (!hit) break;
 
-      this._blockedThisTick = true;
-      this._solidUID        = hit.uid;
+        blocked        = true;
+        this._solidUID = hit.uid;
 
-      if (!this._allowSliding) {
-        inst.x = prevX;
-        inst.y = prevY;
-        this._velX = 0;
-        this._velY = 0;
-        this._trigger("OnSolidHit");
-        return;
-      }
-
-      const cursorPoints = this._getInstancePoints(inst);
-      const solidPoints = this._getInstancePoints(hit);
-      const mtv = this._findMinimumTranslationVector(cursorPoints, solidPoints);
-
-      if (mtv && mtv.overlap > 0) {
-        const pushOut = Math.max(mtv.overlap, 0.01) + 0.01;
-        inst.x += mtv.normalX * pushOut;
-        inst.y += mtv.normalY * pushOut;
-
-        const nx = mtv.normalX;
-        const ny = mtv.normalY;
-        const tx = -ny;
-        const ty = nx;
-        const velAlongTangent = this._velX * tx + this._velY * ty;
-        this._velX = velAlongTangent * tx;
-        this._velY = velAlongTangent * ty;
-      } else {
-        const slide = this._getBestSlideTangent(prevX, prevY, hit);
-        if (slide) {
-          const dot = this._velX * slide.tx + this._velY * slide.ty;
-          this._velX = dot * slide.tx;
-          this._velY = dot * slide.ty;
-          inst.x = prevX + this._velX * dt;
-          inst.y = prevY + this._velY * dt;
-        } else {
-          inst.x = prevX;
-          inst.y = prevY;
+        // No sliding: undo this sub-step and stop dead.
+        if (!this._allowSliding) {
+          inst.x = beforeX;
+          inst.y = beforeY;
           this._velX = 0;
           this._velY = 0;
+          this._contactAge = 0;
+          return { blocked: true, stop: true };
         }
+
+        const cursorPts = this._getInstancePoints(inst);
+        const solidPts  = this._getInstancePoints(hit);
+        const mtv = this._findMinimumTranslationVector(cursorPts, solidPts);
+
+        // Native detector reported an overlap the SAT can't resolve (point-set
+        // mismatch). Back this sub-step out cleanly instead of guessing.
+        if (!mtv || mtv.overlap <= 0) {
+          inst.x = beforeX;
+          inst.y = beforeY;
+          break;
+        }
+
+        const rawNX = mtv.normalX;
+        const rawNY = mtv.normalY;
+
+        // Separate along the TRUE minimum axis so the overlap is always cleared.
+        inst.x += rawNX * (mtv.overlap + 0.05);
+        inst.y += rawNY * (mtv.overlap + 0.05);
+
+        // For SLIDING only, blend with the recent contact normal so a corner/tip
+        // can't flip the slide direction between frames.  On a genuinely fresh
+        // contact (_contactAge high) the raw normal is used unmodified.
+        let nx = rawNX;
+        let ny = rawNY;
+        if (this._contactAge < 6 && (this._lastNX !== 0 || this._lastNY !== 0)) {
+          const bx = this._lastNX + (rawNX - this._lastNX) * 0.5;
+          const by = this._lastNY + (rawNY - this._lastNY) * 0.5;
+          const bl = Math.hypot(bx, by);
+          if (bl > 1e-4) { nx = bx / bl; ny = by / bl; }
+        }
+
+        // Cancel ONLY the inward velocity component — the tangent survives, so
+        // the cursor keeps gliding along the surface at any angle.
+        const vn = this._velX * nx + this._velY * ny;
+        if (vn < 0) {
+          this._velX -= vn * nx;
+          this._velY -= vn * ny;
+        }
+
+        this._lastNX = rawNX;   // store the true normal for next-frame continuity
+        this._lastNY = rawNY;
+        this._contactAge = 0;
       }
 
-      this._trigger("OnSolidHit");
+      return { blocked, stop: false };
     }
 
 

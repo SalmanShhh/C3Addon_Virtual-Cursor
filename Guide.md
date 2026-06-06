@@ -535,6 +535,55 @@ Event: On load game
       Action: Open debugger for the cursor behavior
     ```
 
+23. **Hover-to-select menu cursor**  
+    **Scenario:** You want a menu pointer that slows down near the active option and confirms on click.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
+      Action: Virtual Cursor -> Set Max Speed 320
+
+    Event: Virtual Cursor -> On Interact Pressed "select"
+      Action: Highlight option under cursor
+    ```
+
+24. **Touch drag and release cursor**  
+    **Scenario:** You want a finger-driven pointer that drags objects and releases cleanly.  
+    **Event sheet:**
+    ```text
+    Event: On touch start
+      Action: Virtual Cursor -> Press Interact "drag"
+
+    Event: Every tick
+      Condition: Virtual Cursor -> Is Interact Held "drag"
+      Action: Virtual Cursor -> Simulate Mouse (Touch.X, Touch.Y, 0.30)
+
+    Event: On touch end
+      Action: Virtual Cursor -> Release Interact "drag"
+    ```
+
+25. **Arena clamp with solid walls**  
+    **Scenario:** You want the cursor to stay inside a safe play box while bouncing off obstacles.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Constrain To Layout true
+      Action: Virtual Cursor -> Set Constraint Bounds (64, 64, LayoutWidth - 64, LayoutHeight - 64)
+      Action: Virtual Cursor -> Add Solid WallGroup
+      Action: Virtual Cursor -> Set Allow Sliding false
+    ```
+
+26. **Snap-lock homing cursor**  
+    **Scenario:** You want the cursor to lock onto the nearest target once it gets close enough.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Set Homing Enabled true
+      Action: Virtual Cursor -> Set Homing Mode Snap
+      Action: Virtual Cursor -> Set Homing Strength 1.0
+      Action: Virtual Cursor -> Add Homing Target EnemyGroup
+    ```
+
 ### Other game use cases
 
 - **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
@@ -562,6 +611,10 @@ Event: On load game
 - **Crafting game**: Use cursor motion and interact events for item selection and hovering tooltips.
 - **Multiplayer lobby**: Use the cursor as a shared pointer for player selection and menu interaction.
 - **Prototype game**: Use the behavior as the fastest way to make a working cursor without writing custom movement code.
+- **Racing game**: Use smooth follow and clamp logic to preview braking lines, drift markers, and checkpoint pointers.
+- **Co-op lobby**: Use interact presses to highlight players, confirm ready states, and drive shared selection cursors.
+- **Card game**: Use homing and click-style interaction to move a hover cursor across cards and inventory slots.
+- **Sandbox toy**: Use sliding and solid push-out to build playful pointer motion around moving obstacles.
 
 ## 16. Debugger
 
