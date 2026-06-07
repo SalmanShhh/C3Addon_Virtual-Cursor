@@ -1,6 +1,6 @@
 # Virtual Cursor Guide
 
-Virtual Cursor turns any world object into a lightweight, event-driven cursor that can move, steer, collide, home in on targets, and react to interact inputs. It is built for developers who want a controllable pointer-like object without writing a full custom movement system from scratch.
+Virtual Cursor turns any world object into a lightweight, event-driven cursor that can move, steer, collide, home in on targets, and react to interact inputs. It is built for developers who want a controllable pointer-like object without writing a full custom movement system from scratch, and it works just as well for AI probes, hazard dodging, camera previews, and physics toys as it does for menus and selection UIs.
 
 ## Table of Contents
 
@@ -27,6 +27,7 @@ Virtual Cursor turns any world object into a lightweight, event-driven cursor th
 - **Mouse guided AI cursor**: Make an object follow the mouse, a touch point, or a screen-space target with smooth motion.
 - **Point-and-click interaction**: Use the cursor as a visible pointer for menus, selectors, radar, or tooltips.
 - **Boss arena navigation**: Use homing, solids, and layout clamps to create a chase or dodge cursor that reacts to walls and targets.
+- **AI drone and hazard probe**: Use the cursor as an invisible scout or obstacle-weaving test object for enemy logic, radar pulses, or training scenarios.
 - **Top-down camera pointer**: Use the cursor as the movement source for a player marker, aim reticle, or selection cursor.
 - **Automated motion tests**: Use Simulate Control and Simulate Axis for event-driven input without relying on actual keyboard input.
 - **Physics-like movement with clean control**: Use acceleration, deceleration, and sliding properties to make movement feel responsive without custom physics code.
@@ -141,7 +142,13 @@ If you want the bullet to follow the current motion vector instead of the object
 
 ## 7. Homing, Solids, and Boundaries
 
-Use homing for target-seeking motion, solids for collision, and constraints for layout boundaries.
+Use homing for target-seeking motion, solids for collision, and constraints for layout boundaries. The current homing mode selector now supports three practical behaviors:
+
+- **Steer**: a gentle pull toward the nearest target inside the radius.
+- **Snap**: an instant lock-on once a target enters range.
+- **Snap on collision**: a contact-based lock that only snaps while the cursor overlaps the target's collision shape.
+
+Use Steer for radar or soft pursuit, Snap for instant targeting, and Snap on collision for grab, probe, or contact-trigger logic.
 
 Example of homing toward a target:
 
@@ -150,6 +157,17 @@ Event: On start of layout
   Action: Virtual Cursor -> Set Homing Enabled true
   Action: Virtual Cursor -> Set Homing Radius 160
   Action: Virtual Cursor -> Set Homing Strength 0.6
+  Action: Virtual Cursor -> Set Homing Mode Steer
+  Action: Virtual Cursor -> Add Homing Target EnemyGroup
+```
+
+Example of a contact-driven lock:
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Homing Enabled true
+  Action: Virtual Cursor -> Set Homing Radius 120
+  Action: Virtual Cursor -> Set Homing Mode Snap on collision
   Action: Virtual Cursor -> Add Homing Target EnemyGroup
 ```
 
@@ -227,7 +245,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Clear Homing Targets | Removes all homing targets. |
 | Set Homing Radius | Changes the distance at which targets are considered active. |
 | Set Homing Strength | Changes how strongly the cursor is pulled toward targets. |
-| Set Homing Mode | Switches between Steer (gentle pull) and Snap (instant lock-on) behavior. |
+| Set Homing Mode | Switches among Steer (gentle pull), Snap (instant lock-on by radius), and Snap on collision (contact-based lock) behavior. |
 
 ### Solids
 
@@ -417,21 +435,35 @@ Event: On load game
      Action: Virtual Cursor -> Set Homing Mode Snap
    ```
 
-9. **Button press selection**  
-   **Scenario:** You want a named interact button to trigger a menu choice.  
-   **Event sheet:**
-   ```text
-   Event: Virtual Cursor -> On Interact Pressed "select"
-     Action: Open menu panel
-   ```
-
-10. **Hold-to-drag cursor**  
-    **Scenario:** You want the cursor to keep a button held for a drag action.  
+9. **Drone lure cursor**  
+    **Scenario:** You want a tiny drone cursor to home toward a moving target and trigger a sensor pulse when it gets close.  
     **Event sheet:**
     ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Homing Enabled true
+      Action: Virtual Cursor -> Set Homing Radius 180
+      Action: Virtual Cursor -> Set Max Speed 260
+      Action: Virtual Cursor -> Add Homing Target EnemyGroup
+
+    Event: Virtual Cursor -> On Homing Target Entered
+      Action: Spawn radar pulse at cursor position
+   ```
+
+10. **Hazard dodge probe**  
+    **Scenario:** You want a fast probe cursor to weave around walls and trigger a warning when it collides with a hazard.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Max Speed 420
+      Action: Virtual Cursor -> Set Allow Sliding false
+      Action: Virtual Cursor -> Add Solid HazardGroup
+
     Event: Every tick
-      Condition: Virtual Cursor -> Is Interact Held "drag"
-      Action: Move selected object with cursor
+      Action: Virtual Cursor -> Simulate Control Up
+      Action: Virtual Cursor -> Simulate Control Right
+
+    Event: Virtual Cursor -> On Solid Hit
+      Action: Flash hazard warning
     ```
 
 11. **Auto-run test cursor**  
@@ -502,12 +534,16 @@ Event: On load game
       Action: Virtual Cursor -> Add Solid WallGroup
     ```
 
-19. **Interactive inventory cursor**  
-    **Scenario:** You want a cursor that highlights inventory slots and confirms them.  
+19. **Projectile lead cursor**  
+    **Scenario:** You want a reticle that feeds the current motion angle into a bullet spawn so shots lead the target naturally.  
     **Event sheet:**
     ```text
-    Event: Virtual Cursor -> On Interact Pressed "select"
-      Action: Highlight slot under cursor
+    Event: Every tick
+      Action: Virtual Cursor -> Simulate Mouse (Target.X, Target.Y, 0.25)
+
+    Event: Virtual Cursor -> On Interact Pressed "fire"
+      Action: Spawn bullet at cursor position
+      Action: Bullet -> Set Angle Virtual Cursor.MovingAngle
     ```
 
 20. **Auto-snap to nearest pickup**  
@@ -535,31 +571,35 @@ Event: On load game
       Action: Open debugger for the cursor behavior
     ```
 
-23. **Hover-to-select menu cursor**  
-    **Scenario:** You want a menu pointer that slows down near the active option and confirms on click.  
+23. **Boss phase tracker cursor**  
+    **Scenario:** You want a boss arena cursor to track the boss, clamp to the arena edges, and switch behavior when the boss enters a new phase.  
     **Event sheet:**
     ```text
     Event: Every tick
-      Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
-      Action: Virtual Cursor -> Set Max Speed 320
+      Action: Virtual Cursor -> Set Max Speed 420
+      Action: Virtual Cursor -> Set Homing Enabled true
+      Action: Virtual Cursor -> Set Homing Strength 0.8
+      Action: Virtual Cursor -> Move toward position (Boss.X, Boss.Y)
+      Action: Virtual Cursor -> Set Constrain To Layout true
 
-    Event: Virtual Cursor -> On Interact Pressed "select"
-      Action: Highlight option under cursor
+    Event: Virtual Cursor -> On Layout Edge Hit
+      Action: Trigger arena warning effect
     ```
 
-24. **Touch drag and release cursor**  
-    **Scenario:** You want a finger-driven pointer that drags objects and releases cleanly.  
+24. **Physics toy bouncer**  
+    **Scenario:** You want a playful cursor that slides around moving obstacles and behaves like a tiny physics toy for level prototyping.  
     **Event sheet:**
     ```text
-    Event: On touch start
-      Action: Virtual Cursor -> Press Interact "drag"
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Allow Sliding true
+      Action: Virtual Cursor -> Set Max Speed 300
+      Action: Virtual Cursor -> Add Solid ObstacleGroup
 
     Event: Every tick
-      Condition: Virtual Cursor -> Is Interact Held "drag"
-      Action: Virtual Cursor -> Simulate Mouse (Touch.X, Touch.Y, 0.30)
+      Action: Virtual Cursor -> Simulate Axis (InputAxisX, InputAxisY)
 
-    Event: On touch end
-      Action: Virtual Cursor -> Release Interact "drag"
+    Event: Virtual Cursor -> On Solid Hit
+      Action: Spawn bounce sparkle at cursor position
     ```
 
 25. **Arena clamp with solid walls**  

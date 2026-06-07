@@ -1,11 +1,17 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad,keyboard, touch, and automated input with configurable acceleration,deceleration, and max speed.</i> <br>
-### Version 1.0.1.0
+### Version 1.0.2.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.1.0.c3addon/salmanshh_virtual_cursor-1.0.1.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.2.0.c3addon/salmanshh_virtual_cursor-1.0.2.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
+
+#### What's New in 1.0.2.0
+- **Added:** - added "Snap On Collision" Homing Mode
+- **Changed:** fix collision resolving issues! addon should be now fully usable
+
+<sub>[View full changelog](#changelog)</sub>
 
 ---
 <b><u>Author:</u></b> SalmanShh <br>
@@ -60,7 +66,7 @@ npm run dev
 | Clear Homing Targets | Removes all homing targets and resets the in-range state. |  |
 | Remove Homing Target | Removes picked instances of an object from the homing targets list. | Object             *(object)* <br> |
 | Set Homing Enabled | Enables or disables the homing magnet system. | Enabled             *(boolean)* <br> |
-| Set Homing Mode | Steer pulls the cursor gently toward the nearest target; Snap locks it directly on the target. | Mode             *(combo)* <br> |
+| Set Homing Mode | Steer pulls the cursor gently toward the nearest target within the radius; Snap locks it directly on the target within the radius; Snap on collision locks on only while the cursor overlaps the target's collision shape. | Mode             *(combo)* <br> |
 | Set Homing Radius | Sets the homing detection radius in pixels. | Radius             *(number)* <br> |
 | Set Homing Strength | Sets the pull strength used by Steer mode (0–1). Snap mode ignores this value. | Strength             *(number)* <br> |
 | Press Interact | Marks the named interact input as held and fires On Interact Pressed. Use a consistent ID string (e.g. "interact", "fire", "jump") to distinguish between multiple buttons. | ID             *(string)* <br> |
@@ -131,6 +137,10 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.2.0**
+- **Added:** - added "Snap On Collision" Homing Mode
+- **Changed:** fix collision resolving issues! addon should be now fully usable
 
 **1.0.1.0**
 

@@ -94,14 +94,15 @@
           "SetHomingMode": {
             "list-name": "Set Homing Mode",
             "display-text": "Set homing mode to {0}",
-            "description": "Steer pulls the cursor gently toward the nearest target; Snap locks it directly on the target.",
+            "description": "Steer pulls the cursor gently toward the nearest target within the radius; Snap locks it directly on the target within the radius; Snap on collision locks on only while the cursor overlaps the target's collision shape.",
             "params": {
               "mode": {
                 "name": "Mode",
-                "desc": "Steer = gentle pull, Snap = instant lock-on",
+                "desc": "Steer = gentle pull, Snap = instant lock-on by radius, Snap on collision = lock-on by collision overlap",
                 "items": {
                   "steer": "Steer (pull)",
-                  "snap": "Snap (lock)"
+                  "snap": "Snap (lock)",
+                  "snapcollision": "Snap on collision"
                 }
               }
             }

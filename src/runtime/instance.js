@@ -3,14 +3,18 @@ import AddonTypeMap from "../../template/addonTypeMap.js";
 
 const HOMING_MODE_STEER = 0;
 const HOMING_MODE_SNAP = 1;
+const HOMING_MODE_SNAP_COLLISION = 2; // snap, but detect by collision overlap not radius
 
 export default function (parentClass) {
   return class extends parentClass {
     constructor() {
       super();
 
-      // Register this instance for per-frame _tick() calls.
+      // Register this instance for per-frame _tick() calls, plus _tick2()
+      // (post-tick) which runs AFTER the event sheet — used by collision-snap
+      // homing so it can override a position the event sheet set this frame.
       this._setTicking(true);
+      if (typeof this._setTicking2 === "function") this._setTicking2(true);
 
       // Read initial property values set in the Construct editor.
       // Index order must stay in sync with config.caw.js `properties` array.
@@ -49,7 +53,8 @@ export default function (parentClass) {
       this._homingTargets  = new Set(); // Set<UID> — instances to home toward
       this._homingRadius   = 120;       // px — only targets within this distance are considered
       this._homingStrength = 0.5;       // 0–1 pull strength used by Steer mode
-      this._homingMode     = HOMING_MODE_STEER; // 0 = Steer (pull), 1 = Snap (lock)
+      // 0 = Steer (pull), 1 = Snap (lock), 2 = Snap on collision overlap.
+      this._homingMode     = HOMING_MODE_STEER;
       this._homingHandledThisTick  = false;
       this._hadAxisInputThisTick   = false; // true when axis input drove the cursor this tick
 
@@ -76,12 +81,6 @@ export default function (parentClass) {
       // Per-tick collision state, reset before the move steps below
       this._solidUID        = -1;    // UID of the solid that blocked this tick, or -1
       this._blockedThisTick = false; // True if push-out occurred this tick
-
-      // Slide-continuity state — smooths the contact normal across frames so a
-      // corner/tip can't flip the slide direction and cause stepping.
-      this._lastNX     = 0;   // last contact normal X
-      this._lastNY     = 0;   // last contact normal Y
-      this._contactAge = 99;  // frames since last contact; high = "fresh" contact
 
       // ── Layout constraint ─────────────────────────────────────────────────
       // When enabled, the cursor is clamped inside _constraintBounds each tick.
@@ -310,33 +309,44 @@ export default function (parentClass) {
       // axisX/axisY are local variables computed after direction mode is applied.
       this._hadAxisInputThisTick = (axisX !== 0 || axisY !== 0);
 
-      // Must run BEFORE position update so the blended velocity is applied
-      // in the same frame it's computed.
-      const prevInRange = this._inHomingRange;
-      this._updateHoming(prevInRange);
-
-      // Don't let homing keep shoving the cursor into a wall it's resting
-      // against — project the homing pull onto the wall surface instead.
-      // Uses last tick's contact state, which hasn't been reset yet here.
-      if (this._blockedThisTick && (this._lastNX !== 0 || this._lastNY !== 0)) {
-        const vn = this._velX * this._lastNX + this._velY * this._lastNY;
-        if (vn < 0) {
-          this._velX -= vn * this._lastNX;
-          this._velY -= vn * this._lastNY;
-        }
+      // Steer and radius-Snap work through velocity here, before the move.
+      // Snap-on-collision is deferred to _tick2() (post-event sheet) so it has
+      // the final say on position even when the cursor is driven by events
+      // writing position directly (e.g. pointer-lock Mouse.MovementX/Y).
+      if (this._homingMode !== HOMING_MODE_SNAP_COLLISION) {
+        const prevInRange = this._inHomingRange;
+        this._updateHoming(prevInRange);
       }
 
       // ── 3+4. Move and resolve solids with sliding ─────────────────────────
-      // Sub-stepped move + iterative MTV resolution.  Separating along the true
-      // minimum-translation axis (and blending the contact normal across frames)
-      // lets the cursor slide along any surface shape — including sloped/rotated
-      // solids — without the staircase/tip-flip stepping.
+      // Sub-stepped move + iterative push-out resolution.  Resolution uses the
+      // engine's own overlap test, and cancels only the inward velocity, so the
+      // cursor slides along any surface shape — including sloped/rotated solids
+      // and curved colliders — without staircase stepping or over-sliding.
       this._blockedThisTick = false;
       this._solidUID        = -1;
       this._moveAndResolve();
 
       // ── 5. Layout boundary clamping ───────────────────────────────────────
       this._applyLayoutConstraint();
+    }
+
+    /**
+     * Post-tick: runs AFTER the event sheet each frame.  Only Snap-on-collision
+     * homing acts here — by this point the cursor sits at its final position for
+     * the frame no matter how it was moved (the addon's velocity pipeline via
+     * SimulateMouse/axis, OR events writing position directly for pointer-lock
+     * Mouse.MovementX/Y).  Snapping here therefore works for both mouse styles
+     * and gives the magnet a "stick while overlapping, release when moved off"
+     * feel: each frame the cursor is pulled to wherever the input put it, and if
+     * that lands on a target's collision it locks onto it; otherwise it's free.
+     */
+    _tick2() {
+      if (!this._enabled) return;
+      if (this._homingMode !== HOMING_MODE_SNAP_COLLISION) return;
+
+      const prevInRange = this._inHomingRange;
+      this._updateHoming(prevInRange);
     }
 
     /**
@@ -368,6 +378,7 @@ export default function (parentClass) {
       }
 
       const inst = this.instance;
+      const useCollision = this._homingMode === HOMING_MODE_SNAP_COLLISION;
       let nearestUID  = -1;
       let nearestDist = Infinity;
       let nearestInst = null;
@@ -377,6 +388,13 @@ export default function (parentClass) {
         const target = this._getRuntimeInstanceByUid(uid);
         if (!target) {
           toRemove.push(uid);
+          continue;
+        }
+
+        // Collision snap mode: a target only qualifies while the cursor
+        // actually overlaps its collision shape.  Other modes fall through to
+        // the centre-distance radius gate below.
+        if (useCollision && !inst.testOverlap(target)) {
           continue;
         }
 
@@ -395,7 +413,13 @@ export default function (parentClass) {
         this._homingTargets.delete(uid);
       }
 
-      if (!nearestInst || nearestDist > this._homingRadius) {
+      if (!nearestInst) {
+        return null;
+      }
+
+      // Radius gate applies only to centre-distance modes; collision snap has
+      // already proven contact via testOverlap above.
+      if (!useCollision && nearestDist > this._homingRadius) {
         return null;
       }
 
@@ -436,7 +460,7 @@ export default function (parentClass) {
       const dirX = dx / dist;
       const dirY = dy / dist;
 
-      if (this._homingMode === HOMING_MODE_SNAP) {
+      if (this._homingMode === HOMING_MODE_SNAP || this._homingMode === HOMING_MODE_SNAP_COLLISION) {
         if (this._hadAxisInputThisTick) {
           // Player is actively steering — apply a strong pull so the cursor
           // re-engages naturally the moment directional input stops, but does
@@ -494,28 +518,6 @@ export default function (parentClass) {
     }
 
     /**
-     * Returns an axis-aligned bounding box for an instance.
-     * Prefers the native getBoundingBox() method; falls back to a simple
-     * centre ± half-size rectangle for instances that don't expose it.
-     * @param {object} inst - C3 runtime instance
-     * @returns {{ left: number, top: number, right: number, bottom: number }}
-     */
-    _getBB(inst) {
-      if (typeof inst.getBoundingBox === "function") {
-        return inst.getBoundingBox();
-      }
-      // Fallback: axis-aligned box from position + dimensions
-      const hw = inst.width  / 2;
-      const hh = inst.height / 2;
-      return {
-        left:   inst.x - hw,
-        top:    inst.y - hh,
-        right:  inst.x + hw,
-        bottom: inst.y + hh,
-      };
-    }
-
-    /**
      * Returns the first solid instance overlapping the cursor, or null.
      * Checks custom-registered UIDs first, then the built-in Solid layer.
      * @returns {object|null}
@@ -534,249 +536,107 @@ export default function (parentClass) {
     }
 
     /**
-     * Returns the four corner points of a solid instance in world space using
-     * the actual oriented quad (via getQuad()) so that rotated solids are
-     * represented accurately.  Falls back to computing the quad from the
-     * instance's position, size, and angle when getQuad() is unavailable.
-     * @param {object} solidInst
-     * @returns {Array<{x:number,y:number}>|null}
+     * Finds the nearest direction that lifts the cursor out of `hit`, using the
+     * engine's own testOverlap() — the SAME test used for detection — so the
+     * detector and the resolver can never disagree.  That single fact removes
+     * the shape-mismatch failures of a hand-rolled polygon resolver: it works
+     * for boxes, circles and arbitrary collision polys at any rotation, never
+     * pushes the cursor past the real contact edge, and lets it rest on that
+     * edge instead of jittering across it.
+     *
+     * Probes outward in a ring; for each direction it records the smallest
+     * distance that clears the overlap, and returns the globally smallest as the
+     * push-out vector.  Sub-stepping keeps penetration shallow, so the exit is
+     * found in the first ring or two and this stays cheap.
+     * @param {object} hit - the overlapping blocker instance
+     * @returns {{nx:number, ny:number, dist:number}|null}
      */
-    _getFrameForCollisionPoly(instance) {
-      const animation = instance?.animation;
-      const candidates = [
-        animation?.currentFrame,
-        typeof animation?.getCurrentFrame === "function" ? animation.getCurrentFrame() : null,
-        typeof animation?.GetCurrentFrame === "function" ? animation.GetCurrentFrame() : null,
-        typeof instance?.getCurrentImageInfo === "function" ? instance.getCurrentImageInfo() : null,
-        typeof instance?.GetCurrentImageInfo === "function" ? instance.GetCurrentImageInfo() : null,
-      ];
+    _findExitNormal(hit) {
+      const inst = this.instance;
+      const ox = inst.x;
+      const oy = inst.y;
 
-      for (const frame of candidates) {
-        if (!frame) continue;
-        const getCount = frame.getPolyPointCount || frame.GetPolyPointCount;
-        const getX = frame.getPolyPointX || frame.GetPolyPointX;
-        const getY = frame.getPolyPointY || frame.GetPolyPointY;
-        if (typeof getCount === "function" && typeof getX === "function" && typeof getY === "function") {
-          return frame;
-        }
-      }
-      return null;
-    }
+      const SAMPLES = 24;
+      const stepPx  = Math.max(0.5, Math.min(inst.width, inst.height) * 0.1);
+      const maxStep = Math.max(inst.width, inst.height) + stepPx;
 
-    _readFrameOrigin(frame, axis) {
-      const key = axis === "x" ? "originX" : "originY";
-      const getter = axis === "x" ? (frame?.getOriginX || frame?.GetOriginX) : (frame?.getOriginY || frame?.GetOriginY);
-      const raw = Number(frame?.[key]);
-      if (Number.isFinite(raw)) return raw;
-      if (typeof getter === "function") {
-        try {
-          const value = Number(getter.call(frame));
-          if (Number.isFinite(value)) return value;
-        } catch (_) {}
-      }
-      return 0.5;
-    }
+      let bestDist = Infinity;
+      let bestNX = 0;
+      let bestNY = 0;
 
-    _localPointToWorld(instance, localNormX, localNormY) {
-      const width = Math.abs(Number(instance?.width) || 0);
-      const height = Math.abs(Number(instance?.height) || 0);
-      const angle = Number(instance?.angle) || 0;
-      const localX = localNormX * width;
-      const localY = localNormY * height;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      return {
-        x: (Number(instance?.x) || 0) + (localX * cos) - (localY * sin),
-        y: (Number(instance?.y) || 0) + (localX * sin) + (localY * cos),
-      };
-    }
-
-    _getInstancePoints(instance) {
-      if (!instance) return null;
-
-      const frame = this._getFrameForCollisionPoly(instance);
-      const getCount = frame && (frame.getPolyPointCount || frame.GetPolyPointCount);
-      const getX = frame && (frame.getPolyPointX || frame.GetPolyPointX);
-      const getY = frame && (frame.getPolyPointY || frame.GetPolyPointY);
-
-      if (typeof getCount === "function" && typeof getX === "function" && typeof getY === "function") {
-        let polyCount = 0;
-        try { polyCount = Number(getCount.call(frame)); } catch (_) { polyCount = 0; }
-        if (polyCount >= 3) {
-          const originX = this._readFrameOrigin(frame, "x");
-          const originY = this._readFrameOrigin(frame, "y");
-          const rawPoints = [];
-          for (let index = 0; index < polyCount; index++) {
-            try {
-              const px = Number(getX.call(frame, index));
-              const py = Number(getY.call(frame, index));
-              if (Number.isFinite(px) && Number.isFinite(py)) rawPoints.push({ x: px, y: py });
-            } catch (_) {}
-          }
-          if (rawPoints.length >= 3) {
-            const xs = rawPoints.map((p) => p.x);
-            const ys = rawPoints.map((p) => p.y);
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
-            const isNormalized01 = minX >= -0.01 && maxX <= 1.01 && minY >= -0.01 && maxY <= 1.01;
-            const isOriginRelative = minX >= -1.01 && maxX <= 1.01 && minY >= -1.01 && maxY <= 1.01 && !isNormalized01;
-            return rawPoints.map((p) => {
-              const localNormX = isNormalized01 ? (p.x - originX) : isOriginRelative ? p.x : (p.x - originX);
-              const localNormY = isNormalized01 ? (p.y - originY) : isOriginRelative ? p.y : (p.y - originY);
-              return this._localPointToWorld(instance, localNormX, localNormY);
-            });
+      for (let s = 0; s < SAMPLES; s++) {
+        const ang = (s / SAMPLES) * 2 * Math.PI;
+        const nx  = Math.cos(ang);
+        const ny  = Math.sin(ang);
+        // Stop early once we pass the best exit found so far (d < bestDist).
+        for (let d = stepPx; d <= maxStep && d < bestDist; d += stepPx) {
+          inst.x = ox + nx * d;
+          inst.y = oy + ny * d;
+          if (!inst.testOverlap(hit)) {
+            bestDist = d;
+            bestNX   = nx;
+            bestNY   = ny;
+            break;
           }
         }
       }
 
-      const getQuad = instance.getQuad || instance.GetQuad;
-      if (typeof getQuad === "function") {
-        try {
-          const q = getQuad.call(instance);
-          if (q) {
-            return [
-              { x: Number(q.p1?.x), y: Number(q.p1?.y) },
-              { x: Number(q.p2?.x), y: Number(q.p2?.y) },
-              { x: Number(q.p3?.x), y: Number(q.p3?.y) },
-              { x: Number(q.p4?.x), y: Number(q.p4?.y) },
-            ].filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
-          }
-        } catch (_) {}
-      }
+      inst.x = ox;
+      inst.y = oy;
 
-      const cx = Number(instance.x) || 0;
-      const cy = Number(instance.y) || 0;
-      const w = Math.abs(Number(instance.width) || 0);
-      const h = Math.abs(Number(instance.height) || 0);
-      if (w > 0 && h > 0) {
-        const hx = w * 0.5;
-        const hy = h * 0.5;
-        const angle = Number(instance.angle) || 0;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        return [
-          { x: cx - hx * cos + hy * sin, y: cy - hx * sin - hy * cos },
-          { x: cx + hx * cos + hy * sin, y: cy + hx * sin - hy * cos },
-          { x: cx + hx * cos - hy * sin, y: cy + hx * sin + hy * cos },
-          { x: cx - hx * cos - hy * sin, y: cy - hx * sin + hy * cos },
-        ];
-      }
-
-      return null;
-    }
-
-    _findMinimumTranslationVector(aPoints, bPoints) {
-      if (!aPoints || !bPoints || aPoints.length < 2 || bPoints.length < 2) return null;
-
-      const project = (points, axisX, axisY) => {
-        let min = Infinity;
-        let max = -Infinity;
-        for (const point of points) {
-          const value = point.x * axisX + point.y * axisY;
-          if (value < min) min = value;
-          if (value > max) max = value;
-        }
-        return { min, max };
-      };
-
-      const centerA = aPoints.reduce((sum, p) => ({ x: sum.x + p.x, y: sum.y + p.y }), { x: 0, y: 0 });
-      const centerB = bPoints.reduce((sum, p) => ({ x: sum.x + p.x, y: sum.y + p.y }), { x: 0, y: 0 });
-      const cxA = centerA.x / aPoints.length;
-      const cyA = centerA.y / aPoints.length;
-      const cxB = centerB.x / bPoints.length;
-      const cyB = centerB.y / bPoints.length;
-
-      let bestOverlap = Infinity;
-      let bestAxisX = 0;
-      let bestAxisY = 0;
-
-      const testAxes = (points) => {
-        for (let i = 0; i < points.length; i++) {
-          const a = points[i];
-          const b = points[(i + 1) % points.length];
-          const edgeX = b.x - a.x;
-          const edgeY = b.y - a.y;
-          const axisLen = Math.hypot(edgeX, edgeY) || 1;
-          const axisX = -edgeY / axisLen;
-          const axisY = edgeX / axisLen;
-          const projA = project(aPoints, axisX, axisY);
-          const projB = project(bPoints, axisX, axisY);
-          const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
-          if (overlap <= 0 || overlap >= bestOverlap) continue;
-          const dx = cxB - cxA;
-          const dy = cyB - cyA;
-          // Orient the axis from the solid toward the cursor so the push-out
-          // moves the cursor away from the blocker instead of into it.
-          if (dx * axisX + dy * axisY > 0) {
-            bestAxisX = -axisX;
-            bestAxisY = -axisY;
-          } else {
-            bestAxisX = axisX;
-            bestAxisY = axisY;
-          }
-          bestOverlap = overlap;
-        }
-      };
-
-      testAxes(aPoints);
-      testAxes(bPoints);
-
-      if (!Number.isFinite(bestOverlap) || bestOverlap <= 0) return null;
-      return { normalX: bestAxisX, normalY: bestAxisY, overlap: bestOverlap };
+      if (!Number.isFinite(bestDist)) return null;
+      return { nx: bestNX, ny: bestNY, dist: bestDist };
     }
 
     /**
      * Sub-stepped move + iterative contact resolution.
-     * Advances the cursor by this tick's velocity in increments no larger than
-     * half its smallest dimension, resolving solids each step.  Small steps keep
-     * penetration shallow, which keeps the MTV normal stable at corners — the
-     * single biggest win against the tip wobble/stepping.
+     * Advances by the CURRENT velocity each sub-step (in increments no larger
+     * than half the cursor's smallest dimension), resolving solids each step.
+     * Re-reading the velocity per sub-step is what makes sliding correct: once a
+     * contact projects the velocity onto the surface, the remaining motion
+     * follows that surface instead of being dragged into the wall for the full
+     * original distance.  Small steps also keep penetration shallow, so the
+     * push-out exit is found quickly and the contact normal stays stable.
      */
     _moveAndResolve() {
       const inst = this.instance;
       const dt   = this.runtime.dt;
 
-      const dx   = this._velX * dt;
-      const dy   = this._velY * dt;
-      const dist = Math.hypot(dx, dy);
-
+      const moveDist = Math.hypot(this._velX, this._velY) * dt;
       const step  = Math.max(2, Math.min(inst.width, inst.height) * 0.5);
-      const steps = Math.max(1, Math.ceil(dist / step));
-      const sx = dx / steps;
-      const sy = dy / steps;
+      const steps = Math.max(1, Math.ceil(moveDist / step));
+      const subDt = dt / steps;
 
       let anyBlocked = false;
 
       for (let i = 0; i < steps; i++) {
         const beforeX = inst.x;
         const beforeY = inst.y;
-        inst.x += sx;
-        inst.y += sy;
+        inst.x += this._velX * subDt;
+        inst.y += this._velY * subDt;
 
-        const status = this._resolveContacts(beforeX, beforeY);
-        if (status.blocked) anyBlocked = true;
-        if (status.stop) break; // sliding disabled and we hit something solid
+        if (this._resolveContacts(beforeX, beforeY)) {
+          anyBlocked = true;
+          if (!this._allowSliding) break; // hard stop — no point stepping further
+        }
       }
 
       if (anyBlocked) {
         this._blockedThisTick = true;
         this._trigger("OnSolidHit");   // fires once per tick
-      } else {
-        this._contactAge++;            // no contact this tick -> normal goes stale
       }
     }
 
     /**
-     * Resolves all blockers overlapping the cursor at its current position.
-     * Iterates so pushing out of one blocker into another is handled.  Separates
-     * along the TRUE minimum-translation axis (always clears the overlap) but
-     * slides along a normal blended with the recent contact normal, so a
-     * corner/tip can't flip the slide direction between frames.
+     * Resolves every blocker overlapping the cursor at its current position.
+     * Iterates so pushing out of one blocker into another is handled.  Push-out
+     * direction and distance come from the engine's own overlap test (via
+     * _findExitNormal), and only the velocity going INTO that surface is
+     * cancelled, so the tangential motion survives and the cursor glides along
+     * walls of any shape/rotation without over-sliding, jitter or freezing.
      * @param {number} beforeX - cursor X before this sub-step's move
      * @param {number} beforeY - cursor Y before this sub-step's move
-     * @returns {{blocked:boolean, stop:boolean}}
+     * @returns {boolean} true if a blocker was hit
      */
     _resolveContacts(beforeX, beforeY) {
       const inst = this.instance;
@@ -796,55 +656,27 @@ export default function (parentClass) {
           inst.y = beforeY;
           this._velX = 0;
           this._velY = 0;
-          this._contactAge = 0;
-          return { blocked: true, stop: true };
+          return true;
         }
 
-        const cursorPts = this._getInstancePoints(inst);
-        const solidPts  = this._getInstancePoints(hit);
-        const mtv = this._findMinimumTranslationVector(cursorPts, solidPts);
+        // Nearest way out, measured with the same overlap test used to detect
+        // the hit — so the push-out lands exactly on the contact edge.
+        const exit = this._findExitNormal(hit);
+        if (!exit) break; // couldn't clear within range — leave as-is, don't freeze
 
-        // Native detector reported an overlap the SAT can't resolve (point-set
-        // mismatch). Back this sub-step out cleanly instead of guessing.
-        if (!mtv || mtv.overlap <= 0) {
-          inst.x = beforeX;
-          inst.y = beforeY;
-          break;
-        }
+        inst.x += exit.nx * exit.dist;
+        inst.y += exit.ny * exit.dist;
 
-        const rawNX = mtv.normalX;
-        const rawNY = mtv.normalY;
-
-        // Separate along the TRUE minimum axis so the overlap is always cleared.
-        inst.x += rawNX * (mtv.overlap + 0.05);
-        inst.y += rawNY * (mtv.overlap + 0.05);
-
-        // For SLIDING only, blend with the recent contact normal so a corner/tip
-        // can't flip the slide direction between frames.  On a genuinely fresh
-        // contact (_contactAge high) the raw normal is used unmodified.
-        let nx = rawNX;
-        let ny = rawNY;
-        if (this._contactAge < 6 && (this._lastNX !== 0 || this._lastNY !== 0)) {
-          const bx = this._lastNX + (rawNX - this._lastNX) * 0.5;
-          const by = this._lastNY + (rawNY - this._lastNY) * 0.5;
-          const bl = Math.hypot(bx, by);
-          if (bl > 1e-4) { nx = bx / bl; ny = by / bl; }
-        }
-
-        // Cancel ONLY the inward velocity component — the tangent survives, so
-        // the cursor keeps gliding along the surface at any angle.
-        const vn = this._velX * nx + this._velY * ny;
+        // Cancel ONLY the velocity going into the surface; the tangent survives,
+        // so the cursor keeps gliding along the wall instead of sticking.
+        const vn = this._velX * exit.nx + this._velY * exit.ny;
         if (vn < 0) {
-          this._velX -= vn * nx;
-          this._velY -= vn * ny;
+          this._velX -= vn * exit.nx;
+          this._velY -= vn * exit.ny;
         }
-
-        this._lastNX = rawNX;   // store the true normal for next-frame continuity
-        this._lastNY = rawNY;
-        this._contactAge = 0;
       }
 
-      return { blocked, stop: false };
+      return blocked;
     }
 
 
