@@ -1,17 +1,11 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
-<i>Turns any world object into a fully controllable virtual cursor. Driven entirely through events, movement input, interact presses, homing magnet, and solid collision all exposed via ACEs. Supports gamepad,keyboard, touch, and automated input with configurable acceleration,deceleration, and max speed.</i> <br>
-### Version 1.0.2.0
+<i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
+### Version 1.0.2.1
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.2.0.c3addon/salmanshh_virtual_cursor-1.0.2.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.2.1.c3addon/salmanshh_virtual_cursor-1.0.2.1.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
-
-#### What's New in 1.0.2.0
-- **Added:** - added "Snap On Collision" Homing Mode
-- **Changed:** fix collision resolving issues! addon should be now fully usable
-
-<sub>[View full changelog](#changelog)</sub>
 
 ---
 <b><u>Author:</u></b> SalmanShh <br>
@@ -137,6 +131,8 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.2.1**
 
 **1.0.2.0**
 - **Added:** - added "Snap On Collision" Homing Mode

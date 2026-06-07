@@ -18,5 +18,10 @@
     "added": "- added \"Snap On Collision\" Homing Mode",
     "changed": "fix collision resolving issues! addon should be now fully usable",
     "fixed": ""
+  },
+  "1.0.2.1": {
+    "added": "",
+    "changed": "",
+    "fixed": ""
   }
 }
