@@ -1,6 +1,6 @@
 export const config = {
   listName: "Add Solid",
-  displayText: "Add {0} as solid",
+  displayText: "{my}: Add {0} as solid",
   description: "Registers picked instances as solids the cursor is pushed out of.",
   params: [
     {

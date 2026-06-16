@@ -1,6 +1,6 @@
 export const config = {
   listName: "Simulate Axis",
-  displayText: "Simulate axis ({0}, {1})",
+  displayText: "{my}: Simulate axis ({0}, {1})",
   description: "Intended for analog sticks and virtual joysticks.",
   params: [
     {

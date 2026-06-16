@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Deceleration",
-  displayText: "Set deceleration to {0}",
+  displayText: "{my}: Set deceleration to {0}",
   description: "Sets how fast the cursor slows down when no input is held, in px/s².",
   params: [
     {

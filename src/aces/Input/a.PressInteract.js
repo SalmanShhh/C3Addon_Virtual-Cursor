@@ -1,6 +1,6 @@
 export const config = {
   listName: "Press Interact",
-  displayText: "Press interact {0}",
+  displayText: "{my}: Press interact {0}",
   description:
     "Marks the named interact input as held and fires On Interact Pressed. " +
     "Use a consistent ID string (e.g. \"interact\", \"fire\", \"jump\") to distinguish between multiple buttons.",
@@ -10,6 +10,7 @@ export const config = {
       name: "ID",
       desc: 'Interact input identifier (e.g. "interact", "fire", "jump")',
       type: "string",
+      autocompleteId: "salmanshh_virtual_cursor_interact_ids",
       initialValue: '"interact"',
     },
   ],

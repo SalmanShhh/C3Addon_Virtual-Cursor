@@ -1,6 +1,6 @@
 export const config = {
   listName: "Simulate Control",
-  displayText: "Simulate control {0}",
+  displayText: "{my}: Simulate control {0}",
   description: "Moves the cursor in a direction this tick only. Must be called every tick it should remain held.",
   params: [
     {

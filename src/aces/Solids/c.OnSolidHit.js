@@ -1,6 +1,6 @@
 export const config = {
   listName: "On Solid Hit",
-  displayText: "On Solid Hit",
+  displayText: "{my}: On Solid Hit",
   description:
     "Fires when the cursor collides with a solid object and is pushed out.",
   isTrigger: true,

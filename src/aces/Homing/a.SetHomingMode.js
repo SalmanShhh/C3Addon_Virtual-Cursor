@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Homing Mode",
-  displayText: "Set homing mode to {0}",
+  displayText: "{my}: Set homing mode to {0}",
   description:
     "Steer pulls the cursor gently toward the nearest target within the radius; Snap locks it directly on the target within the radius; Snap on collision locks on only while the cursor overlaps the target's collision shape.",
   params: [

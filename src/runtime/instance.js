@@ -5,6 +5,9 @@ const HOMING_MODE_STEER = 0;
 const HOMING_MODE_SNAP = 1;
 const HOMING_MODE_SNAP_COLLISION = 2; // snap, but detect by collision overlap not radius
 
+const HOVER_MODE_POINT   = 0; // hover when the cursor's origin point is inside the target shape
+const HOVER_MODE_OVERLAP = 1; // hover when the cursor and target collision shapes overlap
+
 export default function (parentClass) {
   return class extends parentClass {
     constructor() {
@@ -26,6 +29,7 @@ export default function (parentClass) {
       this._allowSliding    = !!properties[4]; // boolean CHECK
       this._defaultControls = !!properties[5]; // boolean CHECK — arrow keys active when true
       this._enabled         = !!properties[6]; // boolean CHECK
+      this._hoverMode       = properties[7];   // COMBO: 0=Point, 1=Overlap
 
       // ── Velocity & axis ────────────────────────────────────────────────────
       // _velX / _velY  — current velocity in px/s, modified each tick
@@ -62,6 +66,13 @@ export default function (parentClass) {
       this._nearestHomingUID  = -1;     // UID of closest in-range target, or -1
       this._nearestHomingDist = -1;     // Distance to that target, or -1
       this._inHomingRange     = false;  // True while any target is within radius
+
+      // ── Hover ─────────────────────────────────────────────────────────────
+      // _hoveredUID holds the UID of the instance matched by the most recent
+      // "Is Hovering" check (read via the HoveredUID expression), or -1.
+      // _hoverMode (set from properties above) chooses the detection geometry.
+      // Both are per-instance, so multiple cursors never clobber each other.
+      this._hoveredUID = -1;
 
       // ── Solid collision ───────────────────────────────────────────────────
       // When _solidCollision is true, all instances with the built-in Solid
@@ -370,6 +381,41 @@ export default function (parentClass) {
       }
 
       return null;
+    }
+
+    /**
+     * Tests whether this cursor is currently over any instance of the given
+     * object type, using the active hover-detection mode, and records the UID
+     * of the first matched instance in _hoveredUID (read via the HoveredUID
+     * expression).  Point mode tests the cursor's origin point against the
+     * target's collision shape; Overlap mode tests collision-shape overlap.
+     *
+     * Each cursor evaluates and stores its OWN _hoveredUID, so this stays
+     * correct with multiple Virtual Cursor instances.  To act on the matched
+     * instance, read HoveredUID and use System → Pick by UID — no cross-object
+     * picking happens here, which is what keeps it foolproof per cursor.
+     *
+     * @param {object} objectClass - the object-type parameter from the condition
+     * @returns {boolean} true if the cursor is over an instance of the type
+     */
+    _isHovering(objectClass) {
+      this._hoveredUID = -1;
+      if (!objectClass) return false;
+
+      const inst     = this.instance;
+      const usePoint = this._hoverMode === HOVER_MODE_POINT;
+
+      for (const target of objectClass.pickedInstances()) {
+        if (target === inst) continue; // never hover the cursor itself
+        const over = usePoint
+          ? target.containsPoint(inst.x, inst.y)
+          : inst.testOverlap(target);
+        if (over) {
+          this._hoveredUID = target.uid;
+          return true;
+        }
+      }
+      return false;
     }
 
     _findNearestHomingTarget() {
@@ -789,6 +835,8 @@ export default function (parentClass) {
       this._interactStates.clear();
       this._lastInteractPressedId  = "";
       this._lastInteractReleasedId = "";
+      // Transient hover result; recomputed on the next Is Hovering check.
+      this._hoveredUID = -1;
     }
   };
 }

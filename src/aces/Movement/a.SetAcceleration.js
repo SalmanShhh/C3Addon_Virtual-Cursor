@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Acceleration",
-  displayText: "Set acceleration to {0}",
+  displayText: "{my}: Set acceleration to {0}",
   description: "Sets how fast the cursor speeds up when input is held, in px/s².",
   params: [
     {

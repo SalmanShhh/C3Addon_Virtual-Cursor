@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Homing Strength",
-  displayText: "Set homing strength to {0}",
+  displayText: "{my}: Set homing strength to {0}",
   description: "Sets the pull strength used by Steer mode (0–1). Snap mode ignores this value.",
   params: [
     {

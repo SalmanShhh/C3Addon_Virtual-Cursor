@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Position",
-  displayText: "Set position to ({0}, {1})",
+  displayText: "{my}: Set position to ({0}, {1})",
   description: "Instantly teleports the cursor object to the given position.",
   params: [
     {

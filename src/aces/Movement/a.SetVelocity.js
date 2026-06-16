@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Velocity",
-  displayText: "Set velocity to ({0}, {1})",
+  displayText: "{my}: Set velocity to ({0}, {1})",
   description: "Directly sets the cursor velocity in pixels per second.",
   params: [
     {

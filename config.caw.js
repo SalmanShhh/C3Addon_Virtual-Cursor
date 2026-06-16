@@ -49,6 +49,7 @@ export const aceCategories = {
   Homing:   "Homing",
   Solids:    "Solids",
   State:     "State",
+  Hover:     "Hover",
   Simulate:  "Simulate Controls",
 };
 
@@ -134,5 +135,18 @@ export const properties = [
     name: "Enabled",
     desc: "Whether the behavior is initially enabled or disabled.",
     options: { initialValue: true },
+  },
+  {
+    type: PROPERTY_TYPE.COMBO,
+    id:   "hoverMode",
+    name: "Hover Detection",
+    desc: "How 'Is Hovering' decides the cursor is over an object. Point: the cursor's origin point must be inside the target's collision shape (mouse-like). Overlap: the cursor's own collision shape must overlap the target's.",
+    options: {
+      initialValue: "point",
+      items: [
+        { point:   "Point" },
+        { overlap: "Overlap" },
+      ],
+    },
   },
 ];

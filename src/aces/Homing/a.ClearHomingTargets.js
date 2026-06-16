@@ -1,6 +1,6 @@
 export const config = {
   listName: "Clear Homing Targets",
-  displayText: "Clear all homing targets",
+  displayText: "{my}: Clear all homing targets",
   description: "Removes all homing targets and resets the in-range state.",
   params: [],
 };

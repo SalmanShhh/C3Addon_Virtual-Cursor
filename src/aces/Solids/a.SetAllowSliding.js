@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Allow Sliding",
-  displayText: "Set allow sliding to {0}",
+  displayText: "{my}: Set allow sliding to {0}",
   description:
     "When enabled, only the velocity component perpendicular to the collision wall is zeroed — " +
     "the cursor slides along the surface. When disabled, all velocity is zeroed on any solid hit.",

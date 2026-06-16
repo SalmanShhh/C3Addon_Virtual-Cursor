@@ -1,6 +1,6 @@
 export const config = {
   listName: "Is Interact Held",
-  displayText: "Interact {0} is held",
+  displayText: "{my}: Interact {0} is held",
   description:
     "True while the named interact input is pressed and not yet released. " +
     "Leave ID empty to check if any interact input is currently held.",
@@ -10,6 +10,7 @@ export const config = {
       name: "ID",
       desc: "Interact input identifier, or empty string to check if any interact is held",
       type: "string",
+      autocompleteId: "salmanshh_virtual_cursor_interact_ids",
       initialValue: '"interact"',
     },
   ],

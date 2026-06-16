@@ -1,6 +1,6 @@
 export const config = {
   listName: "Is In Homing Range",
-  displayText: "Is in homing range",
+  displayText: "{my}: Is in homing range",
   description:
     "True when at least one homing target is within the homing radius.",
   params: [],

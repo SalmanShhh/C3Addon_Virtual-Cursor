@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Homing Radius",
-  displayText: "Set homing radius to {0}",
+  displayText: "{my}: Set homing radius to {0}",
   description: "Sets the homing detection radius in pixels.",
   params: [
     {

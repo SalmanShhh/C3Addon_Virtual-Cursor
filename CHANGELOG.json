@@ -23,5 +23,10 @@
     "added": "",
     "changed": "",
     "fixed": ""
+  },
+  "1.0.3.0": {
+    "added": "- Added Support for \"Hover\"\n- Icon show up in actions in the eventsheet, just like the built-in Addons.",
+    "changed": "",
+    "fixed": ""
   }
 }

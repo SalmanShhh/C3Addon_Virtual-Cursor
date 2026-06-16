@@ -94,6 +94,7 @@ Event: Every tick
 | Allow Sliding | Check | true | Lets the cursor slide along walls instead of stopping on contact. |
 | Default Controls | Check | true | Enables arrow key movement when true. |
 | Enabled | Check | true | Turns the behavior on or off. |
+| Hover Detection | Combo | Point | How **Is Hovering** decides the cursor is over an object: Point (the cursor's origin point is inside the target's collision shape) or Overlap (the cursor's own collision shape overlaps the target's). |
 
 ## 5. Movement and Steering
 
@@ -267,6 +268,12 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
 
+### Hover
+
+| Action | Description |
+|---|---|
+| Set Hover Mode | Switches hover detection between Point (cursor's origin point inside the target) and Overlap (collision shapes overlap). |
+
 ### Simulate Controls
 
 | Action | Description |
@@ -292,6 +299,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Homing Target Exited | Triggers when a homing target leaves range. |
 | On Homing Snapped | Triggers when homing mode is set to snap. |
 | On Layout Edge Hit | Triggers when the cursor touches the layout boundary. |
+| Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode), and records its UID for HoveredUID. |
 
 ## 12. Expressions Reference
 
@@ -305,6 +313,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | MovingAngle | Number | Current movement angle in degrees based on the velocity vector. |
 | AxisX | Number | Current movement axis X value. |
 | AxisY | Number | Current movement axis Y value. |
+| HoveredUID | Number | UID of the instance the cursor is hovering from the last Is Hovering check, or -1. |
 | HomingTargetUID | Number | UID of the nearest homing target. |
 | HomingTargetDist | Number | Distance to the nearest homing target. |
 | CountHomingTargets | Number | Number of currently registered targets. |
@@ -624,6 +633,47 @@ Event: On load game
       Action: Virtual Cursor -> Add Homing Target EnemyGroup
     ```
 
+27. **Hover-to-grab item cursor**  
+    **Scenario:** You want the cursor to highlight an item it can pick up, then grab and carry it while the interact button is held. Point mode gives precise, mouse-like selection of the exact item under the cursor's origin point.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Hover Mode Point
+
+    Event: Every tick
+      Action: Item -> Set effect "Glow" disabled        // reset highlight on every item
+
+    Event: Virtual Cursor -> Is Hovering Item
+      Action: System -> Pick Item by UID Virtual Cursor.HoveredUID
+      Action: Item -> Set effect "Glow" enabled         // highlight only the hovered item
+
+    Event: Virtual Cursor -> On Interact Pressed "grab"
+        Condition: Virtual Cursor -> Is Hovering Item
+      Action: System -> Pick Item by UID Virtual Cursor.HoveredUID
+      Action: Item -> Set Boolean "Grabbed" true
+
+    Event: Item -> Is Boolean "Grabbed"
+      Action: Item -> Set position to (Virtual Cursor.CursorX, Virtual Cursor.CursorY)
+
+    Event: Virtual Cursor -> On Interact Released "grab"
+      Action: Item -> Set Boolean "Grabbed" false
+    ```
+
+28. **Drop-zone highlight cursor**  
+    **Scenario:** You want a drag cursor to light up a drop zone whenever it overlaps it. Overlap mode uses the cursor's whole collision shape, so large zones are easy to hit even when the origin point is near an edge.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Hover Mode Overlap
+
+    Event: Every tick
+      Action: DropZone -> Set opacity 40                 // dim all zones
+
+    Event: Virtual Cursor -> Is Hovering DropZone
+      Action: System -> Pick DropZone by UID Virtual Cursor.HoveredUID
+      Action: DropZone -> Set opacity 100               // light up the zone under the cursor
+    ```
+
 ### Other game use cases
 
 - **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
@@ -655,6 +705,8 @@ Event: On load game
 - **Co-op lobby**: Use interact presses to highlight players, confirm ready states, and drive shared selection cursors.
 - **Card game**: Use homing and click-style interaction to move a hover cursor across cards and inventory slots.
 - **Sandbox toy**: Use sliding and solid push-out to build playful pointer motion around moving obstacles.
+- **Inventory game**: Use Is Hovering in Point mode to highlight the exact slot under the cursor, then read HoveredUID to grab and drag items with interact presses.
+- **Board game**: Use Is Hovering in Overlap mode so large tiles or zones light up whenever the cursor overlaps them, even when the origin point is near an edge.
 
 ## 16. Debugger
 

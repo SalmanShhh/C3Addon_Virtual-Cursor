@@ -1,6 +1,6 @@
 export const config = {
   listName: "Clear Solids",
-  displayText: "Clear all solids",
+  displayText: "{my}: Clear all solids",
   description: "Removes all explicit solids from the solids list.",
   params: [],
 };

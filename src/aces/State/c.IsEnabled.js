@@ -1,7 +1,7 @@
 export const config = {
   listName: "Is Enabled",
-  displayText: "VectorCursor is enabled",
-  description: "True if the VectorCursor behavior is currently active.",
+  displayText: "{my}: Is enabled",
+  description: "True if the Virtual Cursor behavior is currently active.",
   params: [],
 };
 

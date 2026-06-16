@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Enabled",
-  displayText: "Set enabled {0}",
+  displayText: "{my}: Set enabled {0}",
   description: "Enables or disables the Virtual Cursor behavior.",
   params: [
     {

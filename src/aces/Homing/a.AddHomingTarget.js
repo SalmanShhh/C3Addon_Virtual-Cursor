@@ -1,6 +1,6 @@
 export const config = {
   listName: "Add Homing Target",
-  displayText: "Add {0} as homing target",
+  displayText: "{my}: Add {0} as homing target",
   description: "Registers picked instances as homing targets the cursor steers toward.",
   params: [
     {

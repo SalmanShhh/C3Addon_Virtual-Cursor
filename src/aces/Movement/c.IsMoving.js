@@ -1,6 +1,6 @@
 export const config = {
   listName: "Is Moving",
-  displayText: "Is moving",
+  displayText: "{my}: Is moving",
   description: "True if the cursor has non-zero velocity.",
   params: [],
 };

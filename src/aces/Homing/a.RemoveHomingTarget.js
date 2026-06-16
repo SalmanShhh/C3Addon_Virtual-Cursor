@@ -1,6 +1,6 @@
 export const config = {
   listName: "Remove Homing Target",
-  displayText: "Remove {0} as homing target",
+  displayText: "{my}: Remove {0} as homing target",
   description: "Removes picked instances of an object from the homing targets list.",
   params: [
     {

@@ -1,6 +1,6 @@
 export const config = {
   listName: "Remove Solid",
-  displayText: "Remove {0} as solid",
+  displayText: "{my}: Remove {0} as solid",
   description: "Removes picked instances of an object from the solids list.",
   params: [
     {

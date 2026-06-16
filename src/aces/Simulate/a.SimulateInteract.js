@@ -1,6 +1,6 @@
 export const config = {
   listName: "Simulate Interact",
-  displayText: "Simulate interact [{0}]",
+  displayText: "{my}: Simulate interact [{0}]",
   description:
     "Fires On Interact Pressed and On Interact Released for the given ID within the same frame. " +
     "Does not set the held state. Use Press Interact + Release Interact separately when held state is needed.",
@@ -10,6 +10,7 @@ export const config = {
       name: "ID",
       desc: "Interact input identifier",
       type: "string",
+      autocompleteId: "salmanshh_virtual_cursor_interact_ids",
       initialValue: '"interact"',
     },
   ],

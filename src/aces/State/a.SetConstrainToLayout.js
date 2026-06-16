@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Constrain To Layout",
-  displayText: "Set constrain to layout {0}",
+  displayText: "{my}: Set constrain to layout {0}",
   description: "Clamps cursor inside layout bounds and fires On Layout Edge Hit.",
   params: [
     {

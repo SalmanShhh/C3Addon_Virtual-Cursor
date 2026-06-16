@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Solid Collision",
-  displayText: "Set solid collision {0}",
+  displayText: "{my}: Set solid collision {0}",
   description: "Enables or disables automatic solid collision for all Solid behavior instances.",
   params: [
     {

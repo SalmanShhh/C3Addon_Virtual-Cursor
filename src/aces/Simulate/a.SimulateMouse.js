@@ -1,6 +1,6 @@
 export const config = {
   listName: "Simulate mouse",
-  displayText: "Simulate mouse at ({0}, {1}) smoothing {2}",
+  displayText: "{my}: Simulate mouse at ({0}, {1}) smoothing {2}",
   description: "Smoothly moves the cursor toward a target position each tick. Unlike Move Toward, uses exponential velocity smoothing for a natural ease-in and ease-out with no sudden stops. Call every tick.",
   params: [
     {

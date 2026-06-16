@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Max Speed",
-  displayText: "Set max speed to {0}",
+  displayText: "{my}: Set max speed to {0}",
   description: "Sets the maximum movement speed in pixels per second.",
   params: [
     {

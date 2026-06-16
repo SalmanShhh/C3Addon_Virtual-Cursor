@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Direction Mode",
-  displayText: "Set direction mode to {0}",
+  displayText: "{my}: Set direction mode to {0}",
   description: "Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis per tick; 8 Directions allows full free movement.",
   params: [
     {

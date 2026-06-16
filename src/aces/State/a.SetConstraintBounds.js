@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Constraint Bounds",
-  displayText: "Set constraint bounds to ({0}, {1}) – ({2}, {3})",
+  displayText: "{my}: Set constraint bounds to ({0}, {1}) – ({2}, {3})",
   description: "Sets a custom constraint rectangle. Pass all zeros to reset to full layout bounds.",
   params: [
     {

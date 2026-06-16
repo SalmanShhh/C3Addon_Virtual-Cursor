@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set Homing Enabled",
-  displayText: "Set homing {0}",
+  displayText: "{my}: Set homing {0}",
   description: "Enables or disables the homing magnet system.",
   params: [
     {

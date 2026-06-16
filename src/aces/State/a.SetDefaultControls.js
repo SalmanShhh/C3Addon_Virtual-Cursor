@@ -1,6 +1,6 @@
 export const config = {
   listName: "Set default controls",
-  displayText: "Set default controls {0}",
+  displayText: "{my}: Set default controls {0}",
   description: "Enable or disable the built-in arrow key controls. When disabled, use the Simulate Control action to drive movement from the event sheet.",
   params: [
     {
