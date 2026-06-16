@@ -1,6 +1,6 @@
 export const config = {
-  listName: "Move toward position",
-  displayText: "{my}: Move toward ({0}, {1})",
+  listName: "Simulate Direct Mouse Position",
+  displayText: "{my}: Simulate direct mouse position ({0}, {1})",
   description: "Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse.",
   params: [
     {

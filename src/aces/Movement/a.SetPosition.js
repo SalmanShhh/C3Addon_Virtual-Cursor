@@ -1,7 +1,8 @@
 export const config = {
   listName: "Set Position",
   displayText: "{my}: Set position to ({0}, {1})",
-  description: "Instantly teleports the cursor object to the given position.",
+  description: "Deprecated — use 'Simulate Direct Mouse Position' instead. Instantly teleports the cursor to the given position (and updates velocity when called every tick). Kept so existing projects keep working.",
+  isDeprecated: true,
   params: [
     {
       id: "x",
@@ -23,6 +24,5 @@ export const config = {
 export const expose = true;
 
 export default function (x, y) {
-  this.instance.x = x;
-  this.instance.y = y;
+  this._setPosition(x, y);
 }

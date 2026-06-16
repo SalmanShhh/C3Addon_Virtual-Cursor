@@ -28,5 +28,10 @@
     "added": "- Added Support for \"Hover\".\n- Add Autocomplete support.\n- Icon show up in actions in the eventsheet, just like the built-in Addons..\n",
     "changed": "",
     "fixed": ""
+  },
+  "1.0.4.0": {
+    "added": "- Derive Current speed from Position change.\n- Replace \"Set Postion\" with \"Simulate Direct Mouse Position\" ACE",
+    "changed": "",
+    "fixed": ""
   }
 }

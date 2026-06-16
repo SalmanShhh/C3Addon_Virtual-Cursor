@@ -39,6 +39,17 @@ export default function (parentClass) {
       this._axisX = 0;
       this._axisY = 0;
 
+      // ── Set Position velocity derivation ──────────────────────────────────
+      // Set Position teleports the object but also derives a velocity from the
+      // move so VelocityX/Y, Speed, MovingAngle and Is Moving reflect it. We
+      // track the previous target and whether Set Position ran on consecutive
+      // ticks so continuous driving reports a stable velocity. See _setPosition().
+      this._lastSetPosX             = 0;
+      this._lastSetPosY             = 0;
+      this._hasLastSetPos           = false;
+      this._setPosCalledThisTick    = false;
+      this._setPosWasCalledLastTick = false;
+
       // ── Interact buttons ───────────────────────────────────────────────────
       // _interactStates — Map<id: string, held: boolean>
       //   Tracks the held state for any named interact input.
@@ -185,10 +196,45 @@ export default function (parentClass) {
     }
 
     /**
+     * Teleports the cursor to (x, y) and derives a velocity from the move so the
+     * VelocityX/Y, Speed, MovingAngle and Is Moving ACEs reflect it.
+     *
+     * Velocity is measured against the PREVIOUS Set Position (not the live
+     * position, which the tick loop may have nudged just before the event sheet
+     * ran) and only when Set Position was also called on the previous tick. That
+     * gives a stable reading when the cursor is driven by calling Set Position
+     * every tick, while a one-off teleport imparts no velocity — so it can't
+     * fling the cursor afterwards.
+     */
+    _setPosition(x, y) {
+      const inst = this.instance;
+      const dt   = this.runtime.dt;
+
+      if (dt > 0 && this._hasLastSetPos && this._setPosWasCalledLastTick) {
+        this._velX = (x - this._lastSetPosX) / dt;
+        this._velY = (y - this._lastSetPosY) / dt;
+      }
+
+      this._lastSetPosX          = x;
+      this._lastSetPosY          = y;
+      this._hasLastSetPos        = true;
+      this._setPosCalledThisTick = true;
+
+      inst.x = x;
+      inst.y = y;
+    }
+
+    /**
      * Called every frame by the C3 runtime while _setTicking(true).
      * Order: velocity → homing → move → solid collision → layout clamp
      */
     _tick() {
+      // Roll the per-tick Set Position flag so _setPosition() can tell continuous
+      // driving (called again this frame) from a one-off teleport. Done before
+      // the enabled check so the flag stays consistent even while disabled.
+      this._setPosWasCalledLastTick = this._setPosCalledThisTick;
+      this._setPosCalledThisTick    = false;
+
       if (!this._enabled) return;
 
       const dt = this.runtime.dt; // seconds elapsed this frame
@@ -862,6 +908,11 @@ export default function (parentClass) {
       this._lastInteractReleasedId = "";
       // Transient hover result; recomputed on the next Is Hovering check.
       this._hoveredUID = -1;
+      // Drop the Set Position history so the first post-load Set Position doesn't
+      // derive a velocity from a stale pre-load position.
+      this._hasLastSetPos           = false;
+      this._setPosCalledThisTick    = false;
+      this._setPosWasCalledLastTick = false;
     }
   };
 }

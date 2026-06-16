@@ -1,16 +1,15 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.0.3.0
+### Version 1.0.4.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.3.0.c3addon/salmanshh_virtual_cursor-1.0.3.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.4.0.c3addon/salmanshh_virtual_cursor-1.0.4.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.0.3.0
-- **Added:** - Added Support for "Hover".
-- **Added:** - Add Autocomplete support.
-- **Added:** - Icon show up in actions in the eventsheet, just like the built-in Addons..
+#### What's New in 1.0.4.0
+- **Added:** - Derive Current speed from Position change.
+- **Added:** - Replace "Set Postion" with "Simulate Direct Mouse Position" ACE
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -77,13 +76,13 @@ npm run dev
 | Set Acceleration | Sets how fast the cursor speeds up when input is held, in px/s². | Acceleration             *(number)* <br> |
 | Set Deceleration | Sets how fast the cursor slows down when no input is held, in px/s². | Deceleration             *(number)* <br> |
 | Set Max Speed | Sets the maximum movement speed in pixels per second. | Max Speed             *(number)* <br> |
-| Set Position | Instantly teleports the cursor object to the given position. | X             *(number)* <br>Y             *(number)* <br> |
+| Set Position | Deprecated — use 'Simulate Direct Mouse Position' instead. Instantly teleports the cursor to the given position (and updates velocity when called every tick). Kept so existing projects keep working. | X             *(number)* <br>Y             *(number)* <br> |
 | Set Velocity | Directly sets the cursor velocity in pixels per second. | Velocity X             *(number)* <br>Velocity Y             *(number)* <br> |
-| Move toward position | Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse. | Target X             *(number)* <br>Target Y             *(number)* <br> |
+| Simulate Direct Mouse Position | Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse. | Target X             *(number)* <br>Target Y             *(number)* <br> |
 | Simulate Axis | Intended for analog sticks and virtual joysticks. | Axis X             *(number)* <br>Axis Y             *(number)* <br> |
 | Simulate Control | Moves the cursor in a direction this tick only. Must be called every tick it should remain held. | Direction             *(combo)* <br> |
 | Simulate Interact | Fires On Interact Pressed and On Interact Released for the given ID within the same frame. Does not set the held state. Use Press Interact + Release Interact separately when held state is needed. | ID             *(string)* <br> |
-| Simulate mouse | Smoothly moves the cursor toward a target position each tick. Unlike Move Toward, uses exponential velocity smoothing for a natural ease-in and ease-out with no sudden stops. Call every tick. | Target X             *(number)* <br>Target Y             *(number)* <br>Smoothing             *(number)* <br> |
+| Simulate mouse | Smoothly moves the cursor toward a target position each tick. Unlike Simulate Direct Mouse Position, uses exponential velocity smoothing for a natural ease-in and ease-out with no sudden stops. Call every tick. | Target X             *(number)* <br>Target Y             *(number)* <br>Smoothing             *(number)* <br> |
 | Add Solid | Registers picked instances as solids the cursor is pushed out of. | Object             *(object)* <br> |
 | Clear Solids | Removes all explicit solids from the solids list. |  |
 | Remove Solid | Removes picked instances of an object from the solids list. | Object             *(object)* <br> |
@@ -142,6 +141,10 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.4.0**
+- **Added:** - Derive Current speed from Position change.
+- **Added:** - Replace "Set Postion" with "Simulate Direct Mouse Position" ACE
 
 **1.0.3.0**
 - **Added:** - Added Support for "Hover".

@@ -63,7 +63,7 @@ You can make an object move with built-in platform movement, but you often still
 3. Use one of these input paths:
    - Default Controls for arrow keys
    - Simulate Control or Simulate Axis for event-sheet input
-   - Move Toward or Simulate Mouse for mouse-like follow
+   - Simulate Direct Mouse Position or Simulate Mouse for mouse-like follow
 4. Add a collision object if you want walls or solids to block movement.
 
 Example start setup:
@@ -80,7 +80,7 @@ Simple mouse-follow setup:
 
 ```text
 Event: Every tick
-  Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
+  Action: Virtual Cursor -> Simulate Direct Mouse Position (Mouse.X, Mouse.Y)
 ```
 
 ## 4. Plugin Properties
@@ -204,7 +204,7 @@ Event: Every tick
 
 ## 9. Mouse Follow and Smooth Cursor Motion
 
-For a natural pointer feel, use Move Toward for direct target following or Simulate Mouse for smooth easing.
+For a natural pointer feel, use Simulate Direct Mouse Position for direct target following or Simulate Mouse for smooth easing.
 
 Example of a smooth mouse cursor:
 
@@ -228,13 +228,13 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 
 | Action | Description |
 |---|---|
-| Set Position | Teleports the cursor to an exact X and Y location. |
+| Set Position _(deprecated)_ | Teleports the cursor to an exact X and Y location. Deprecated — use Simulate Direct Mouse Position instead. |
 | Set Velocity | Applies an instant velocity vector. |
 | Stop Movement | Forces the cursor to halt. |
 | Set Max Speed | Changes the top speed of the cursor. |
 | Set Acceleration | Changes how fast the cursor ramps toward max speed. |
 | Set Deceleration | Changes how fast the cursor slows down when input stops. |
-| Move Toward Position | Points the cursor toward a target coordinate. |
+| Simulate Direct Mouse Position | Points the cursor toward a target coordinate; call every tick to follow a moving target such as the mouse. |
 
 ### Homing
 
@@ -382,7 +382,7 @@ Event: On load game
    **Event sheet:**
    ```text
    Event: Every tick
-     Action: Virtual Cursor -> Move toward position (Mouse.X, Mouse.Y)
+     Action: Virtual Cursor -> Simulate Direct Mouse Position (Mouse.X, Mouse.Y)
    ```
 
 2. **Smooth aim reticle**  
@@ -515,7 +515,7 @@ Event: On load game
     ```text
     Event: Every tick
       Action: Virtual Cursor -> Set Max Speed 500
-      Action: Virtual Cursor -> Move toward position (Boss.X, Boss.Y)
+      Action: Virtual Cursor -> Simulate Direct Mouse Position (Boss.X, Boss.Y)
     ```
 
 16. **Safe layout clamp**  
@@ -588,7 +588,7 @@ Event: On load game
       Action: Virtual Cursor -> Set Max Speed 420
       Action: Virtual Cursor -> Set Homing Enabled true
       Action: Virtual Cursor -> Set Homing Strength 0.8
-      Action: Virtual Cursor -> Move toward position (Boss.X, Boss.Y)
+      Action: Virtual Cursor -> Simulate Direct Mouse Position (Boss.X, Boss.Y)
       Action: Virtual Cursor -> Set Constrain To Layout true
 
     Event: Virtual Cursor -> On Layout Edge Hit
@@ -724,7 +724,7 @@ The main debugger view shows:
 
 - Use the correct direction mode for the input path you want. Four-way and eight-way modes behave differently when two directions are held at once.
 - Simulate Control and Simulate Axis are one-tick inputs. If you want them to stay active, call them every tick.
-- Move Toward and Simulate Mouse are best for pointer-like following, not for exact teleporting.
+- Simulate Direct Mouse Position and Simulate Mouse are best for pointer-like following, not for exact teleporting.
 - If you want the cursor to stop on walls, set Allow Sliding to false.
 - If you want arrow keys to be active, keep Default Controls enabled or toggle it from the event sheet.
 - If a target is no longer valid, remove it from the homing list before it causes stale state.
