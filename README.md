@@ -8,8 +8,9 @@
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
 #### What's New in 1.0.3.0
-- **Added:** - Added Support for "Hover"
-- **Added:** - Icon show up in actions in the eventsheet, just like the built-in Addons.
+- **Added:** - Added Support for "Hover".
+- **Added:** - Add Autocomplete support.
+- **Added:** - Icon show up in actions in the eventsheet, just like the built-in Addons..
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -143,8 +144,9 @@ npm run dev
 ## Changelog
 
 **1.0.3.0**
-- **Added:** - Added Support for "Hover"
-- **Added:** - Icon show up in actions in the eventsheet, just like the built-in Addons.
+- **Added:** - Added Support for "Hover".
+- **Added:** - Add Autocomplete support.
+- **Added:** - Icon show up in actions in the eventsheet, just like the built-in Addons..
 
 **1.0.2.1**
 

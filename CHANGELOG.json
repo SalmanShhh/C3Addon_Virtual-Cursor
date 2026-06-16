@@ -25,7 +25,7 @@
     "fixed": ""
   },
   "1.0.3.0": {
-    "added": "- Added Support for \"Hover\"\n- Icon show up in actions in the eventsheet, just like the built-in Addons.",
+    "added": "- Added Support for \"Hover\".\n- Add Autocomplete support.\n- Icon show up in actions in the eventsheet, just like the built-in Addons..\n",
     "changed": "",
     "fixed": ""
   }
