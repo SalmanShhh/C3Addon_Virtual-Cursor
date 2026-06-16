@@ -30,6 +30,7 @@ export const config = {
 export const expose = true;
 
 export default function (targetX, targetY, smoothing) {
+  if (this._ignoringInput) return; // input frozen — see Set Ignoring Input
   // Store the target for _tick() to consume.  The actual velocity smoothing
   // runs inside _tick() so it has access to dt and respects the full
   // movement pipeline (direction mode, solid collision, layout clamping).

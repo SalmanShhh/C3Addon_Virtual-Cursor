@@ -468,6 +468,21 @@
                 "desc": "Whether the behavior is active"
               }
             }
+          },
+          "SetIgnoringInput": {
+            "list-name": "Set Ignoring Input",
+            "display-text": "{my}: Set ignoring input {0}",
+            "description": "When enabled, all movement input is ignored — arrow keys are not read and every Simulate action (Simulate Control / Axis / Mouse / Direct Mouse Position / Interact) does nothing. The cursor coasts to a stop while still ticking; direct drives like Set Position and Set Velocity still work. Use it to freeze input for cutscenes or menus.",
+            "params": {
+              "state": {
+                "name": "State",
+                "desc": "Enable to ignore (freeze) input, disable to resume",
+                "items": {
+                  "enabled": "Enabled",
+                  "disabled": "Disabled"
+                }
+              }
+            }
           }
         },
         "conditions": {
@@ -567,6 +582,12 @@
             "list-name": "Is Enabled",
             "display-text": "{my}: Is enabled",
             "description": "True if the Virtual Cursor behavior is currently active.",
+            "params": {}
+          },
+          "IsIgnoringInput": {
+            "list-name": "Is Ignoring Input",
+            "display-text": "{my}: Is ignoring input",
+            "description": "True while movement input is being ignored (set via Set Ignoring Input).",
             "params": {}
           },
           "OnBounce": {

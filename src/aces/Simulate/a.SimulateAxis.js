@@ -23,6 +23,7 @@ export const config = {
 export const expose = true;
 
 export default function (x, y) {
+  if (this._ignoringInput) return; // input frozen — see Set Ignoring Input
   // Accumulate into the simulated-axis scratch fields.
   // Using += means this call combines with any SimulateControl calls
   // made in the same tick (e.g. both a virtual stick and a D-pad can

@@ -1,15 +1,15 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.0.5.0
+### Version 1.0.6.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.5.0.c3addon/salmanshh_virtual_cursor-1.0.5.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.6.0.c3addon/salmanshh_virtual_cursor-1.0.6.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.0.5.0
-- **Added:** - Added Expressions "Max Speed" , "Acceleration" and "Deceleration"
-- **Added:** - Add Bounce support
+#### What's New in 1.0.6.0
+- **Added:** - Add "Ignore Input" Toggle.
+- **Added:** - Added Support for Custom "Button" Behaviour that's in the works.
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -95,6 +95,7 @@ npm run dev
 | Set default controls | Enable or disable the built-in arrow key controls. When disabled, use the Simulate Control action to drive movement from the event sheet. | Enabled             *(boolean)* <br> |
 | Set Direction Mode | Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis per tick; 8 Directions allows full free movement. | Mode             *(combo)* <br> |
 | Set Enabled | Enables or disables the Virtual Cursor behavior. | Enabled             *(boolean)* <br> |
+| Set Ignoring Input | When enabled, all movement input is ignored — arrow keys are not read and every Simulate action (Simulate Control / Axis / Mouse / Direct Mouse Position / Interact) does nothing. The cursor coasts to a stop while still ticking; direct drives like Set Position and Set Velocity still work. Use it to freeze input for cutscenes or menus. | State             *(combo)* <br> |
 
 
 ---
@@ -114,6 +115,7 @@ npm run dev
 | Is Blocked | True if the cursor was pushed out of a solid object this tick. |  |
 | On Solid Hit | Fires when the cursor collides with a solid object and is pushed out. |  |
 | Is Enabled | True if the Virtual Cursor behavior is currently active. |  |
+| Is Ignoring Input | True while movement input is being ignored (set via Set Ignoring Input). |  |
 | On Bounce | Fires when the cursor reflects off a surface it is set to bounce on — a solid, a custom object, or a constraint edge. Fires once per tick. |  |
 
 
@@ -148,6 +150,10 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.6.0**
+- **Added:** - Add "Ignore Input" Toggle.
+- **Added:** - Added Support for Custom "Button" Behaviour that's in the works.
 
 **1.0.5.0**
 - **Added:** - Added Expressions "Max Speed" , "Acceleration" and "Deceleration"

@@ -38,5 +38,10 @@
     "added": "- Added Expressions \"Max Speed\" , \"Acceleration\" and \"Deceleration\"\n- Add Bounce support",
     "changed": "",
     "fixed": ""
+  },
+  "1.0.6.0": {
+    "added": "- Add \"Ignore Input\" Toggle.\n- Added Support for Custom \"Button\" Behaviour that's in the works.",
+    "changed": "",
+    "fixed": ""
   }
 }

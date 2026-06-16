@@ -8,6 +8,22 @@ const HOMING_MODE_SNAP_COLLISION = 2; // snap, but detect by collision overlap n
 const HOVER_MODE_POINT   = 0; // hover when the cursor's origin point is inside the target shape
 const HOVER_MODE_OVERLAP = 1; // hover when the cursor and target collision shapes overlap
 
+// Shared cross-addon pointer registry. UI addons (e.g. ButtonKit) read this to treat
+// each Virtual Cursor as a pointer — position for hover, interact state for press — so
+// gamepad / keyboard / touch routed through a cursor drives UI with zero event wiring.
+// It lives on globalThis because separate addons are separate bundles with no shared
+// module. Each entry is a small read-only contract object, so consumers never reach
+// into this behavior's internals.
+const CURSOR_REGISTRY_KEY = "__salmanshh_virtual_cursor_pointers__";
+function getCursorRegistry() {
+  let registry = globalThis[CURSOR_REGISTRY_KEY];
+  if (!registry) {
+    registry = new Set();
+    globalThis[CURSOR_REGISTRY_KEY] = registry;
+  }
+  return registry;
+}
+
 export default function (parentClass) {
   return class extends parentClass {
     constructor() {
@@ -33,6 +49,22 @@ export default function (parentClass) {
       this._setBounceMode(properties[7]);
       this._enabled         = !!properties[8]; // boolean CHECK — kept last to match panel order
 
+      // Publish this cursor to the shared pointer registry (see CURSOR_REGISTRY_KEY) so
+      // UI addons can treat it as a pointer with no event wiring. The accessors are read
+      // lazily each frame, so referencing state initialised later in this constructor
+      // (e.g. _interactStates) is fine.
+      this._pointerContract = {
+        getPosition:   () => [this.instance?.x ?? 0, this.instance?.y ?? 0],
+        isInteracting: () => {
+          for (const held of this._interactStates.values()) {
+            if (held) return true;
+          }
+          return false;
+        },
+        isEnabled:     () => this._enabled !== false,
+      };
+      getCursorRegistry().add(this._pointerContract);
+
       // ── Velocity & axis ────────────────────────────────────────────────────
       // _velX / _velY  — current velocity in px/s, modified each tick
       // _axisX / _axisY — normalised input direction (-1..1), set via ACEs
@@ -40,6 +72,12 @@ export default function (parentClass) {
       this._velY  = 0;
       this._axisX = 0;
       this._axisY = 0;
+
+      // When true, all movement input is ignored: arrow keys are not read and
+      // every Simulate-category ACE no-ops, so the cursor coasts to a stop while
+      // still ticking (homing, coasting, direct Set Position/Velocity still work).
+      // Toggled by Set Ignoring Input; queried by Is Ignoring Input.
+      this._ignoringInput = false;
 
       // ── Set Position velocity derivation ──────────────────────────────────
       // Set Position teleports the object but also derives a velocity from the
@@ -261,7 +299,17 @@ export default function (parentClass) {
       // Only active when _defaultControls is true; event-sheet-driven input
       // (SetAxis / SimulateControl) can still override via _axisX/_axisY or
       // the simulated-axis scratch fields respectively.
-      if (this._defaultControls) {
+      if (this._ignoringInput) {
+        // Ignoring input: arrow keys aren't read and the Simulate ACEs no-op, so
+        // force the axis and any pending simulated/mouse input to zero — the
+        // cursor coasts to a stop. Direct drives (Set Position/Velocity) still work.
+        this._axisX = 0;
+        this._axisY = 0;
+        this._simulatedAxisX   = 0;
+        this._simulatedAxisY   = 0;
+        this._hasSimulatedAxis = false;
+        this._hasMouseTarget   = false;
+      } else if (this._defaultControls) {
         const kb = this.runtime.keyboard;
         if (kb) {
           this._axisX = 0;
@@ -887,6 +935,7 @@ export default function (parentClass) {
     }
 
     _release() {
+      getCursorRegistry().delete(this._pointerContract);
       super._release();
     }
 
@@ -950,6 +999,8 @@ export default function (parentClass) {
       this._hasLastSetPos           = false;
       this._setPosCalledThisTick    = false;
       this._setPosWasCalledLastTick = false;
+      // Resume input on load so it can't stay frozen from a mid-cutscene save.
+      this._ignoringInput = false;
     }
   };
 }

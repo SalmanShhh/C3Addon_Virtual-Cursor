@@ -33,6 +33,7 @@ const DIRECTION_VECTORS = [
 ];
 
 export default function (direction) {
+  if (this._ignoringInput) return; // input frozen — see Set Ignoring Input
   const vec = DIRECTION_VECTORS[direction] ?? [0, 0];
   // Write to the simulated-axis scratch fields, not _axisX/_axisY directly.
   // _tick() will consume these each frame and clear them, so if this action

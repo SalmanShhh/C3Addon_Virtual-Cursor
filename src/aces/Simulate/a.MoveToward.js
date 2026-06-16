@@ -23,6 +23,7 @@ export const config = {
 export const expose = true;
 
 export default function (targetX, targetY) {
+  if (this._ignoringInput) return; // input frozen — see Set Ignoring Input
   // Direct placement (same as the deprecated Set Position): _setPosition snaps
   // the cursor to the point and derives velocity from the move, so following the
   // mouse each tick gives a responsive cursor with correct Speed/MovingAngle —

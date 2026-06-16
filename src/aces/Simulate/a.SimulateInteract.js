@@ -19,6 +19,7 @@ export const config = {
 export const expose = true;
 
 export default function (interactId) {
+  if (this._ignoringInput) return; // input frozen — see Set Ignoring Input
   // Set the last-ID fields so the trigger conditions filter correctly.
   this._lastInteractPressedId  = interactId;
   this._lastInteractReleasedId = interactId;

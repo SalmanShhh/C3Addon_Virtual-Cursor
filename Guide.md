@@ -268,6 +268,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Constraint Bounds | Sets a custom clamp box for the cursor. |
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
+| Set Ignoring Input | Freezes all movement input — arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
 | Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
 
 ### Hover
@@ -303,6 +304,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Layout Edge Hit | Triggers when the cursor touches the layout boundary. |
 | On Bounce | Triggers when the cursor reflects off a surface it's set to bounce on (solid, custom object, or constraint edge). Fires once per tick. |
 | Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode). When several overlap, the front-most (top-layered) one is recorded in HoveredUID. Hidden instances and instances on hidden layers are ignored. |
+| Is Ignoring Input | Returns true while movement input is frozen (set via Set Ignoring Input). |
 
 ## 12. Expressions Reference
 
@@ -808,6 +810,21 @@ Event: On load game
 
     Event: Virtual Cursor -> On Bounce
       Action: Logo -> Set color to random(0,255), random(0,255), random(0,255)
+    ```
+
+39. **Cutscene input freeze**  
+    **Scenario:** During a cutscene the player's cursor should stop responding to all input, then resume afterward — while scripted Set Position moves still work.  
+    **Event sheet:**
+    ```text
+    Event: On cutscene start
+      Action: Virtual Cursor -> Set Ignoring Input Enabled
+
+    Event: On cutscene end
+      Action: Virtual Cursor -> Set Ignoring Input Disabled
+
+    // Scripted moves still drive the cursor while input is frozen
+    Event: System -> CutscenePlaying = 1
+      Action: Virtual Cursor -> Set Position (PanTarget.X, PanTarget.Y)
     ```
 
 ## 15. Other Game Use Cases
