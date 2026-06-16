@@ -104,7 +104,7 @@ npm run dev
 | On Homing Snapped | Fires when the cursor teleports to a homing target in Snap mode. |  |
 | On Homing Target Entered | Fires when the cursor enters the homing radius of a target. |  |
 | On Homing Target Exited | Fires when the cursor leaves the homing radius of all targets. |  |
-| Is Hovering | True while the cursor is over an instance of the given object, using the current Hover Detection mode. Records the matched instance — read HoveredUID and use System → Pick by UID to act on that exact instance. Wrap in System → Trigger once while true for an 'on hover enter' event. | Object *(object)* <br> |
+| Is Hovering | True while the cursor is over an instance of the given object, using the current Hover Detection mode. When several overlap, the front-most (top-layered) one is chosen. Hidden instances and instances on hidden layers are ignored. Records that instance — read HoveredUID and use System → Pick by UID to act on that exact instance. Wrap in System → Trigger once while true for an 'on hover enter' event. | Object *(object)* <br> |
 | Is Interact Held | True while the named interact input is pressed and not yet released. Leave ID empty to check if any interact input is currently held. | ID *(string)* <br> |
 | On Interact Pressed | Fires when Press Interact is called for the given ID. Leave ID empty to fire for any interact press. | ID *(string)* <br> |
 | On Interact Released | Fires when Release Interact is called for the given ID. Leave ID empty to fire for any interact release. | ID *(string)* <br> |
@@ -123,7 +123,7 @@ npm run dev
 | GetHomingTargetUIDByIndex | Returns the UID of a registered homing target by index, or -1. | number | Index *(number)* <br> | 
 | HomingTargetDist | Returns distance to the nearest in-range homing target, or -1. | number |  | 
 | HomingTargetUID | Returns the UID of the nearest in-range homing target, or -1. | number |  | 
-| HoveredUID | Returns the UID of the instance the cursor is hovering, as found by the most recent 'Is Hovering' check, or -1 if none. Use with System → Pick by UID to act on that instance (e.g. the item to highlight or grab). | number |  | 
+| HoveredUID | Returns the UID of the front-most (top-layered) instance the cursor is hovering, as found by the most recent 'Is Hovering' check, or -1 if none. Use with System → Pick by UID to act on that instance (e.g. the item to highlight or grab). | number |  | 
 | AxisX | Returns the current horizontal axis input value (-1 to 1). | number |  | 
 | AxisY | Returns the current vertical axis input value (-1 to 1). | number |  | 
 | CursorX | Returns the current X position of the cursor object. | number |  | 

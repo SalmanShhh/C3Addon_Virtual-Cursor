@@ -299,7 +299,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Homing Target Exited | Triggers when a homing target leaves range. |
 | On Homing Snapped | Triggers when homing mode is set to snap. |
 | On Layout Edge Hit | Triggers when the cursor touches the layout boundary. |
-| Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode), and records its UID for HoveredUID. |
+| Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode). When several overlap, the front-most (top-layered) one is recorded in HoveredUID. Hidden instances and instances on hidden layers are ignored. |
 
 ## 12. Expressions Reference
 
@@ -313,7 +313,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | MovingAngle | Number | Current movement angle in degrees based on the velocity vector. |
 | AxisX | Number | Current movement axis X value. |
 | AxisY | Number | Current movement axis Y value. |
-| HoveredUID | Number | UID of the instance the cursor is hovering from the last Is Hovering check, or -1. |
+| HoveredUID | Number | UID of the front-most (top-layered) instance the cursor is hovering from the last Is Hovering check, or -1. |
 | HomingTargetUID | Number | UID of the nearest homing target. |
 | HomingTargetDist | Number | Distance to the nearest homing target. |
 | CountHomingTargets | Number | Number of currently registered targets. |

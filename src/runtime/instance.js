@@ -386,8 +386,9 @@ export default function (parentClass) {
     /**
      * Tests whether this cursor is currently over any instance of the given
      * object type, using the active hover-detection mode, and records the UID
-     * of the first matched instance in _hoveredUID (read via the HoveredUID
-     * expression).  Point mode tests the cursor's origin point against the
+     * of the front-most (top) matched instance in _hoveredUID (read via the
+     * HoveredUID expression).  Hidden instances and instances on hidden layers
+     * are skipped.  Point mode tests the cursor's origin point against the
      * target's collision shape; Overlap mode tests collision-shape overlap.
      *
      * Each cursor evaluates and stores its OWN _hoveredUID, so this stays
@@ -405,17 +406,41 @@ export default function (parentClass) {
       const inst     = this.instance;
       const usePoint = this._hoverMode === HOVER_MODE_POINT;
 
+      // Track the front-most overlapping instance rather than the first one
+      // found: a higher layer index is a more-foreground layer (bottom = 0),
+      // and within a layer a higher zIndex is drawn on top (0 = back).  This
+      // matches how a real cursor picks up the top object under the point.
+      let topInst       = null;
+      let topLayerIndex = -Infinity;
+      let topZIndex     = -Infinity;
+
       for (const target of objectClass.pickedInstances()) {
         if (target === inst) continue; // never hover the cursor itself
+
+        // Skip instances that aren't actually drawn — a hidden instance, or one
+        // on a layer (or parent layer group) that is hidden — so hover matches
+        // what the player can actually see.
+        if (target.isVisible === false) continue;
+        const layer = target.layer;
+        if (layer && layer.isSelfAndParentsVisible === false) continue;
+
         const over = usePoint
           ? target.containsPoint(inst.x, inst.y)
           : inst.testOverlap(target);
-        if (over) {
-          this._hoveredUID = target.uid;
-          return true;
+        if (!over) continue;
+
+        const layerIndex = layer?.index ?? 0;
+        const zIndex     = target.zIndex ?? 0;
+        if (layerIndex > topLayerIndex ||
+            (layerIndex === topLayerIndex && zIndex > topZIndex)) {
+          topInst       = target;
+          topLayerIndex = layerIndex;
+          topZIndex     = zIndex;
         }
       }
-      return false;
+
+      this._hoveredUID = topInst ? topInst.uid : -1;
+      return topInst !== null;
     }
 
     _findNearestHomingTarget() {

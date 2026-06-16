@@ -3,7 +3,8 @@ export const config = {
   displayText: "{my}: Is hovering {0}",
   description:
     "True while the cursor is over an instance of the given object, using the current Hover Detection mode. " +
-    "Records the matched instance — read HoveredUID and use System → Pick by UID to act on that exact instance. " +
+    "When several overlap, the front-most (top-layered) one is chosen. Hidden instances and instances on hidden layers are ignored. " +
+    "Records that instance — read HoveredUID and use System → Pick by UID to act on that exact instance. " +
     "Wrap in System → Trigger once while true for an 'on hover enter' event.",
   isTrigger: false,
   isInvertible: true,
