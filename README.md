@@ -1,15 +1,15 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.0.4.0
+### Version 1.0.5.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.4.0.c3addon/salmanshh_virtual_cursor-1.0.4.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.5.0.c3addon/salmanshh_virtual_cursor-1.0.5.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.0.4.0
-- **Added:** - Derive Current speed from Position change.
-- **Added:** - Replace "Set Postion" with "Simulate Direct Mouse Position" ACE
+#### What's New in 1.0.5.0
+- **Added:** - Added Expressions "Max Speed" , "Acceleration" and "Deceleration"
+- **Added:** - Add Bounce support
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -55,8 +55,9 @@ npm run dev
 | Directions | Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis; 8 Directions allows full free movement. | combo |
 | Allow Sliding | When enabled, the cursor slides along solid obstacles rather than stopping on contact. When disabled, all velocity is zeroed on any solid hit. | check |
 | Default Controls | If enabled, arrow keys control movement. Otherwise, use the Simulate Control actions to drive movement from the event sheet. | check |
-| Enabled | Whether the behavior is initially enabled or disabled. | check |
 | Hover Detection | How 'Is Hovering' decides the cursor is over an object. Point: the cursor's origin point must be inside the target's collision shape (mouse-like). Overlap: the cursor's own collision shape must overlap the target's. | combo |
+| Bounce | Which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Best with momentum (Set Velocity); held axis input into a wall overrides it. | combo |
+| Enabled | Whether the behavior is initially enabled or disabled. | check |
 
 
 ---
@@ -78,7 +79,7 @@ npm run dev
 | Set Max Speed | Sets the maximum movement speed in pixels per second. | Max Speed             *(number)* <br> |
 | Set Position | Deprecated — use 'Simulate Direct Mouse Position' instead. Instantly teleports the cursor to the given position (and updates velocity when called every tick). Kept so existing projects keep working. | X             *(number)* <br>Y             *(number)* <br> |
 | Set Velocity | Directly sets the cursor velocity in pixels per second. | Velocity X             *(number)* <br>Velocity Y             *(number)* <br> |
-| Simulate Direct Mouse Position | Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse. | Target X             *(number)* <br>Target Y             *(number)* <br> |
+| Simulate Direct Mouse Position | Instantly places the cursor at the given position, like a real mouse pointer. When called every tick (e.g. to follow the mouse or a touch point), it also updates the velocity so VelocityX/Y, Speed, MovingAngle and Is Moving reflect the movement. | X             *(number)* <br>Y             *(number)* <br> |
 | Simulate Axis | Intended for analog sticks and virtual joysticks. | Axis X             *(number)* <br>Axis Y             *(number)* <br> |
 | Simulate Control | Moves the cursor in a direction this tick only. Must be called every tick it should remain held. | Direction             *(combo)* <br> |
 | Simulate Interact | Fires On Interact Pressed and On Interact Released for the given ID within the same frame. Does not set the held state. Use Press Interact + Release Interact separately when held state is needed. | ID             *(string)* <br> |
@@ -88,6 +89,7 @@ npm run dev
 | Remove Solid | Removes picked instances of an object from the solids list. | Object             *(object)* <br> |
 | Set Allow Sliding | When enabled, only the velocity component perpendicular to the collision wall is zeroed — the cursor slides along the surface. When disabled, all velocity is zeroed on any solid hit. | State             *(combo)* <br> |
 | Set Solid Collision | Enables or disables automatic solid collision for all Solid behavior instances. | Enabled             *(boolean)* <br> |
+| Set Bounce | Chooses which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Works on momentum (e.g. Set Velocity); held axis input into a wall overrides it. | Mode             *(combo)* <br> |
 | Set Constraint Bounds | Sets a custom constraint rectangle. Pass all zeros to reset to full layout bounds. | Left             *(number)* <br>Top             *(number)* <br>Right             *(number)* <br>Bottom             *(number)* <br> |
 | Set Constrain To Layout | Clamps cursor inside layout bounds and fires On Layout Edge Hit. | Enabled             *(boolean)* <br> |
 | Set default controls | Enable or disable the built-in arrow key controls. When disabled, use the Simulate Control action to drive movement from the event sheet. | Enabled             *(boolean)* <br> |
@@ -112,6 +114,7 @@ npm run dev
 | Is Blocked | True if the cursor was pushed out of a solid object this tick. |  |
 | On Solid Hit | Fires when the cursor collides with a solid object and is pushed out. |  |
 | Is Enabled | True if the Virtual Cursor behavior is currently active. |  |
+| On Bounce | Fires when the cursor reflects off a surface it is set to bounce on — a solid, a custom object, or a constraint edge. Fires once per tick. |  |
 
 
 ---
@@ -123,16 +126,20 @@ npm run dev
 | HomingTargetDist | Returns distance to the nearest in-range homing target, or -1. | number |  | 
 | HomingTargetUID | Returns the UID of the nearest in-range homing target, or -1. | number |  | 
 | HoveredUID | Returns the UID of the front-most (top-layered) instance the cursor is hovering, as found by the most recent 'Is Hovering' check, or -1 if none. Use with System → Pick by UID to act on that instance (e.g. the item to highlight or grab). | number |  | 
+| Acceleration | Returns the current acceleration in pixels per second squared. | number |  | 
 | AxisX | Returns the current horizontal axis input value (-1 to 1). | number |  | 
 | AxisY | Returns the current vertical axis input value (-1 to 1). | number |  | 
 | CursorX | Returns the current X position of the cursor object. | number |  | 
 | CursorY | Returns the current Y position of the cursor object. | number |  | 
+| Deceleration | Returns the current deceleration in pixels per second squared. | number |  | 
+| MaxSpeed | Returns the current maximum movement speed in pixels per second. | number |  | 
 | MovingAngle | Returns the current movement angle in degrees based on the cursor's velocity vector. | number |  | 
 | Speed | Returns the cursor's current movement speed in pixels per second. | number |  | 
 | VelocityX | Returns the current horizontal velocity in pixels per second. | number |  | 
 | VelocityY | Returns the current vertical velocity in pixels per second. | number |  | 
 | CountSolids | Returns the total number of registered explicit solids. | number |  | 
 | SolidUID | Returns the UID of the last solid hit this tick, or -1. | number |  | 
+| BounceMode | Returns which Bounce type is active as a token: "none", "solids", "constraints", or "both" (solids and constraints). | string |  | 
 | ConstraintBottom | Returns the bottom edge of the active constraint region. | number |  | 
 | ConstraintLeft | Returns the left edge of the active constraint region. | number |  | 
 | ConstraintRight | Returns the right edge of the active constraint region. | number |  | 
@@ -141,6 +148,10 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.5.0**
+- **Added:** - Added Expressions "Max Speed" , "Acceleration" and "Deceleration"
+- **Added:** - Add Bounce support
 
 **1.0.4.0**
 - **Added:** - Derive Current speed from Position change.

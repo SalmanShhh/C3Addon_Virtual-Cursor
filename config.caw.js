@@ -130,13 +130,6 @@ export const properties = [
     options: { initialValue: true },
   },
   {
-    type: PROPERTY_TYPE.CHECK,
-    id:   "enabled",
-    name: "Enabled",
-    desc: "Whether the behavior is initially enabled or disabled.",
-    options: { initialValue: true },
-  },
-  {
     type: PROPERTY_TYPE.COMBO,
     id:   "hoverMode",
     name: "Hover Detection",
@@ -148,5 +141,27 @@ export const properties = [
         { overlap: "Overlap" },
       ],
     },
+  },
+  {
+    type: PROPERTY_TYPE.COMBO,
+    id:   "bounce",
+    name: "Bounce",
+    desc: "Which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Best with momentum (Set Velocity); held axis input into a wall overrides it.",
+    options: {
+      initialValue: "none",
+      items: [
+        { none:        "None" },
+        { solids:      "Solids Only" },
+        { constraints: "Constraints Only" },
+        { both:        "Solids and Constraints" },
+      ],
+    },
+  },
+  {
+    type: PROPERTY_TYPE.CHECK,
+    id:   "enabled",
+    name: "Enabled",
+    desc: "Whether the behavior is initially enabled or disabled.",
+    options: { initialValue: true },
   },
 ];

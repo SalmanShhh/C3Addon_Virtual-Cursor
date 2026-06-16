@@ -28,8 +28,10 @@ export default function (parentClass) {
       this._directionMode   = properties[3]; // COMBO: 0=UpDown, 1=LeftRight, 2=4Dir, 3=8Dir
       this._allowSliding    = !!properties[4]; // boolean CHECK
       this._defaultControls = !!properties[5]; // boolean CHECK — arrow keys active when true
-      this._enabled         = !!properties[6]; // boolean CHECK
-      this._hoverMode       = properties[7];   // COMBO: 0=Point, 1=Overlap
+      this._hoverMode       = properties[6];   // COMBO: 0=Point, 1=Overlap
+      // COMBO: 0=None, 1=Solids Only, 2=Constraints Only, 3=Solids and Constraints
+      this._setBounceMode(properties[7]);
+      this._enabled         = !!properties[8]; // boolean CHECK — kept last to match panel order
 
       // ── Velocity & axis ────────────────────────────────────────────────────
       // _velX / _velY  — current velocity in px/s, modified each tick
@@ -103,6 +105,7 @@ export default function (parentClass) {
       // Per-tick collision state, reset before the move steps below
       this._solidUID        = -1;    // UID of the solid that blocked this tick, or -1
       this._blockedThisTick = false; // True if push-out occurred this tick
+      this._bouncedThisTick = false; // True if a surface reflected the cursor this tick (fires OnBounce)
 
       // ── Layout constraint ─────────────────────────────────────────────────
       // When enabled, the cursor is clamped inside _constraintBounds each tick.
@@ -134,6 +137,17 @@ export default function (parentClass) {
       // Simple listener registry used by dispatch() to call JS callbacks
       // registered via on().  Separate from the C3 condition trigger system.
       this.events = {};
+    }
+
+    /**
+     * Resolves the Bounce combo into per-surface reflect flags.
+     * Combo: 0=None, 1=Solids Only, 2=Constraints Only, 3=Solids and Constraints.
+     * @param {number} mode - the Bounce combo index
+     */
+    _setBounceMode(mode) {
+      this._bounceMode        = mode;
+      this._bounceSolids      = mode === 1 || mode === 3;
+      this._bounceConstraints = mode === 2 || mode === 3;
     }
 
     /**
@@ -381,11 +395,15 @@ export default function (parentClass) {
       // cursor slides along any surface shape — including sloped/rotated solids
       // and curved colliders — without staircase stepping or over-sliding.
       this._blockedThisTick = false;
+      this._bouncedThisTick = false;
       this._solidUID        = -1;
       this._moveAndResolve();
 
       // ── 5. Layout boundary clamping ───────────────────────────────────────
       this._applyLayoutConstraint();
+
+      // Fire once per tick if any surface actually reflected the cursor.
+      if (this._bouncedThisTick) this._trigger("OnBounce");
     }
 
     /**
@@ -767,8 +785,10 @@ export default function (parentClass) {
         blocked        = true;
         this._solidUID = hit.uid;
 
-        // No sliding: undo this sub-step and stop dead.
-        if (!this._allowSliding) {
+        // No sliding (and not bouncing solids): undo this sub-step and stop dead.
+        // When solid bounce is on we fall through to the push-out + reflect path
+        // below so the cursor rebounds instead of sticking.
+        if (!this._allowSliding && !this._bounceSolids) {
           inst.x = beforeX;
           inst.y = beforeY;
           this._velX = 0;
@@ -784,12 +804,16 @@ export default function (parentClass) {
         inst.x += exit.nx * exit.dist;
         inst.y += exit.ny * exit.dist;
 
-        // Cancel ONLY the velocity going into the surface; the tangent survives,
-        // so the cursor keeps gliding along the wall instead of sticking.
+        // Cancel the velocity going into the surface; the tangent survives, so
+        // the cursor glides along the wall. With solid bounce on, REFLECT the
+        // normal component (factor 2) instead of just removing it (factor 1) for
+        // a lossless rebound — the same exit normal handles rotated/curved solids.
         const vn = this._velX * exit.nx + this._velY * exit.ny;
         if (vn < 0) {
-          this._velX -= vn * exit.nx;
-          this._velY -= vn * exit.ny;
+          const k = this._bounceSolids ? 2 : 1;
+          this._velX -= k * vn * exit.nx;
+          this._velY -= k * vn * exit.ny;
+          if (this._bounceSolids) this._bouncedThisTick = true;
         }
       }
 
@@ -818,25 +842,38 @@ export default function (parentClass) {
       };
       let clamped = false;
 
-      // Clamp X and zero velocity on the wall axis
+      // Clamp X; reflect the inward velocity when constraint bounce is on, else
+      // zero it. A reflection (not a plain clamp) is what fires On Bounce.
       if (inst.x < bounds.left) {
         inst.x = bounds.left;
-        if (this._velX < 0) this._velX = 0;
+        if (this._velX < 0) {
+          if (this._bounceConstraints) { this._velX = -this._velX; this._bouncedThisTick = true; }
+          else this._velX = 0;
+        }
         clamped = true;
       } else if (inst.x > bounds.right) {
         inst.x = bounds.right;
-        if (this._velX > 0) this._velX = 0;
+        if (this._velX > 0) {
+          if (this._bounceConstraints) { this._velX = -this._velX; this._bouncedThisTick = true; }
+          else this._velX = 0;
+        }
         clamped = true;
       }
 
-      // Clamp Y and zero velocity on the wall axis
+      // Clamp Y; reflect the inward velocity when constraint bounce is on, else zero it.
       if (inst.y < bounds.top) {
         inst.y = bounds.top;
-        if (this._velY < 0) this._velY = 0;
+        if (this._velY < 0) {
+          if (this._bounceConstraints) { this._velY = -this._velY; this._bouncedThisTick = true; }
+          else this._velY = 0;
+        }
         clamped = true;
       } else if (inst.y > bounds.bottom) {
         inst.y = bounds.bottom;
-        if (this._velY > 0) this._velY = 0;
+        if (this._velY > 0) {
+          if (this._bounceConstraints) { this._velY = -this._velY; this._bouncedThisTick = true; }
+          else this._velY = 0;
+        }
         clamped = true;
       }
 

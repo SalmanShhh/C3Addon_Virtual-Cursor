@@ -1,19 +1,19 @@
 export const config = {
   listName: "Simulate Direct Mouse Position",
   displayText: "{my}: Simulate direct mouse position ({0}, {1})",
-  description: "Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse.",
+  description: "Instantly places the cursor at the given position, like a real mouse pointer. When called every tick (e.g. to follow the mouse or a touch point), it also updates the velocity so VelocityX/Y, Speed, MovingAngle and Is Moving reflect the movement.",
   params: [
     {
       id: "targetX",
-      name: "Target X",
-      desc: "X coordinate to move toward",
+      name: "X",
+      desc: "X position to place the cursor at",
       type: "number",
       initialValue: "0",
     },
     {
       id: "targetY",
-      name: "Target Y",
-      desc: "Y coordinate to move toward",
+      name: "Y",
+      desc: "Y position to place the cursor at",
       type: "number",
       initialValue: "0",
     },
@@ -23,24 +23,9 @@ export const config = {
 export const expose = true;
 
 export default function (targetX, targetY) {
-  const dx = targetX - this.instance.x;
-  const dy = targetY - this.instance.y;
-  const dist = Math.hypot(dx, dy);
-
-  // If the cursor would overshoot this frame, snap to the target and stop.
-  // This prevents the oscillation/jitter that occurs when deceleration alone
-  // can't prevent the cursor from crossing the target point.
-  const speed = Math.hypot(this._velX, this._velY);
-  const stepDist = speed * this.runtime.dt;
-  if (dist <= Math.max(stepDist, 1)) {
-    this.instance.x = targetX;
-    this.instance.y = targetY;
-    this._velX = 0;
-    this._velY = 0;
-    this._axisX = 0;
-    this._axisY = 0;
-  } else {
-    this._axisX = dx / dist;
-    this._axisY = dy / dist;
-  }
+  // Direct placement (same as the deprecated Set Position): _setPosition snaps
+  // the cursor to the point and derives velocity from the move, so following the
+  // mouse each tick gives a responsive cursor with correct Speed/MovingAngle —
+  // not the laggy acceleration chase the old axis-steering version had.
+  this._setPosition(targetX, targetY);
 }

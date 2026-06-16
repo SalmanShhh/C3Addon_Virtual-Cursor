@@ -95,6 +95,7 @@ Event: Every tick
 | Default Controls | Check | true | Enables arrow key movement when true. |
 | Enabled | Check | true | Turns the behavior on or off. |
 | Hover Detection | Combo | Point | How **Is Hovering** decides the cursor is over an object: Point (the cursor's origin point is inside the target's collision shape) or Overlap (the cursor's own collision shape overlaps the target's). |
+| Bounce | Combo | None | Which surfaces the cursor reflects off (lossless bounce, like the Bullet behavior): None, Solids Only, Constraints Only, or Solids and Constraints. Best with momentum (Set Velocity). |
 
 ## 5. Movement and Steering
 
@@ -234,7 +235,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Max Speed | Changes the top speed of the cursor. |
 | Set Acceleration | Changes how fast the cursor ramps toward max speed. |
 | Set Deceleration | Changes how fast the cursor slows down when input stops. |
-| Simulate Direct Mouse Position | Points the cursor toward a target coordinate; call every tick to follow a moving target such as the mouse. |
+| Simulate Direct Mouse Position | Instantly places the cursor at a target coordinate (like a mouse) and updates velocity; call every tick to follow a moving target such as the mouse. |
 
 ### Homing
 
@@ -267,6 +268,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Constraint Bounds | Sets a custom clamp box for the cursor. |
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
+| Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
 
 ### Hover
 
@@ -299,6 +301,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Homing Target Exited | Triggers when a homing target leaves range. |
 | On Homing Snapped | Triggers when homing mode is set to snap. |
 | On Layout Edge Hit | Triggers when the cursor touches the layout boundary. |
+| On Bounce | Triggers when the cursor reflects off a surface it's set to bounce on (solid, custom object, or constraint edge). Fires once per tick. |
 | Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode). When several overlap, the front-most (top-layered) one is recorded in HoveredUID. Hidden instances and instances on hidden layers are ignored. |
 
 ## 12. Expressions Reference
@@ -310,6 +313,9 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | VelocityX | Number | Current horizontal velocity. |
 | VelocityY | Number | Current vertical velocity. |
 | Speed | Number | Current total speed. |
+| MaxSpeed | Number | Current maximum movement speed (pixels/sec). |
+| Acceleration | Number | Current acceleration (pixels/sec²). |
+| Deceleration | Number | Current deceleration (pixels/sec²). |
 | MovingAngle | Number | Current movement angle in degrees based on the velocity vector. |
 | AxisX | Number | Current movement axis X value. |
 | AxisY | Number | Current movement axis Y value. |
@@ -320,6 +326,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | SolidUID | Number | UID of the most recent solid hit. |
 | CountSolids | Number | Number of registered solid blockers. |
 | ConstraintLeft / Top / Right / Bottom | Number | The current clamp box values. |
+| BounceMode | String | Active Bounce type token: "none", "solids", "constraints", or "both". |
 
 ## 13. System Use Cases
 
@@ -674,7 +681,136 @@ Event: On load game
       Action: DropZone -> Set opacity 100               // light up the zone under the cursor
     ```
 
-### Other game use cases
+29. **Speed-scaled motion trail**  
+    **Scenario:** You want a trail that intensifies and points the right way as the cursor speeds up, using its live speed relative to its max.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Trail -> Set opacity (Virtual Cursor.Speed / Virtual Cursor.MaxSpeed * 100)
+      Action: Trail -> Set angle Virtual Cursor.MovingAngle
+    ```
+
+30. **Context-sensitive cursor icon**  
+    **Scenario:** You want the cursor art to change with what it is over — a hand over items, a crosshair over enemies, otherwise a default pointer.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Hover Mode Point
+
+    Event: Virtual Cursor -> Is Hovering Item
+      Action: Cursor -> Set animation "Hand"
+
+    Else
+    + Virtual Cursor -> Is Hovering Enemy
+      Action: Cursor -> Set animation "Crosshair"
+
+    Else
+      Action: Cursor -> Set animation "Default"
+    ```
+
+31. **Tooltip that follows the cursor**  
+    **Scenario:** Show a tooltip next to the pointer while hovering an item, and hide it otherwise.  
+    **Event sheet:**
+    ```text
+    Event: Virtual Cursor -> Is Hovering Item
+      Action: Tooltip -> Set position to (Virtual Cursor.CursorX + 16, Virtual Cursor.CursorY)
+      Action: Tooltip -> Set visible
+
+    Else
+      Action: Tooltip -> Set invisible
+    ```
+
+32. **Charge-and-release dash**  
+    **Scenario:** Hold a button to build power, release to launch the cursor toward the mouse with momentum that coasts to a stop.  
+    **Event sheet:**
+    ```text
+    Event: Virtual Cursor -> Is Interact Held "dash"
+      Action: System -> Add 600 * dt to DashPower
+
+    Event: Virtual Cursor -> On Interact Released "dash"
+      Action: Virtual Cursor -> Set Velocity (DashPower * cos(angle(Cursor.X, Cursor.Y, Mouse.X, Mouse.Y)), DashPower * sin(angle(Cursor.X, Cursor.Y, Mouse.X, Mouse.Y)))
+      Action: System -> Set DashPower to 0
+    ```
+
+33. **RTS unit selector**  
+    **Scenario:** Move a selector over units and press select to mark the one under the cursor. Overlap mode makes large units easy to catch.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Hover Mode Overlap
+
+    Event: Virtual Cursor -> On Interact Pressed "select"
+        Condition: Virtual Cursor -> Is Hovering Unit
+      Action: System -> Pick Unit by UID Virtual Cursor.HoveredUID
+      Action: Unit -> Set Boolean "Selected" true
+    ```
+
+34. **Hold-to-brake precision**  
+    **Scenario:** Tighten stops while a brake button is held by tripling deceleration, then restore the original value — captured with the Deceleration expression.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: System -> Set NormalDecel to Virtual Cursor.Deceleration
+
+    Event: Virtual Cursor -> Is Interact Held "brake"
+      Action: Virtual Cursor -> Set Deceleration (NormalDecel * 3)
+
+    Else
+      Action: Virtual Cursor -> Set Deceleration NormalDecel
+    ```
+
+35. **Gamepad aim reticle with deadzone**  
+    **Scenario:** Drive an aim reticle from the right analog stick, ignoring small stick drift.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+        Condition: System -> abs(Gamepad.Axis(0, 2)) > 15 OR abs(Gamepad.Axis(0, 3)) > 15
+      Action: Virtual Cursor -> Simulate Axis (Gamepad.Axis(0, 2) / 100, Gamepad.Axis(0, 3) / 100)
+    ```
+
+36. **Bouncing puck**  
+    **Scenario:** You want an air-hockey-style puck that ricochets off walls and the arena edges while keeping its speed.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Bounce Solids and Constraints
+      Action: Virtual Cursor -> Set Constrain To Layout true
+      Action: Virtual Cursor -> Add Solid WallGroup
+      Action: Virtual Cursor -> Set Velocity (300, 180)
+
+    Event: Virtual Cursor -> On Bounce
+      Action: Play "bounce" sound
+    ```
+
+37. **Breakout ball**  
+    **Scenario:** A ball cursor bounces off bricks and the paddle (all registered as solids); each bounce that lands on a brick removes it.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Bounce Solids Only
+      Action: Virtual Cursor -> Add Solid BrickGroup
+      Action: Virtual Cursor -> Add Solid Paddle
+      Action: Virtual Cursor -> Set Velocity (0, -260)
+
+    Event: Virtual Cursor -> On Bounce
+        Condition: System -> Pick Brick by UID Virtual Cursor.SolidUID
+      Action: Brick -> Destroy
+    ```
+
+38. **Bouncing logo screensaver**  
+    **Scenario:** A DVD-style logo drifts and ricochets off the screen edges only, changing colour on every bounce.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Bounce Constraints Only
+      Action: Virtual Cursor -> Set Constrain To Layout true
+      Action: Virtual Cursor -> Set Velocity (200, 150)
+
+    Event: Virtual Cursor -> On Bounce
+      Action: Logo -> Set color to random(0,255), random(0,255), random(0,255)
+    ```
+
+## 15. Other Game Use Cases
 
 - **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
 - **Twin-stick shooter**: Use Simulate Axis or Simulate Control to drive a cursor-like reticle from analog input.
@@ -688,9 +824,14 @@ Event: On load game
 - **Physics toy**: Use sliding and collision to create playful pointer motion around obstacles.
 - **Menu prototype**: Use the cursor for selection handles, radial menus, and hover states.
 - **Accessibility tool**: Use default controls and Simulate Control to build custom input paths without changing the behavior itself.
-
-## 15. Other Game Use Cases
-
+- **Point-and-click adventure**: Hover items in Point mode to highlight the exact thing under the pointer, then interact to examine or use it.
+- **Match-3 / grid puzzle**: Hover a tile in Overlap mode and press interact to pick or swap, using HoveredUID to act on the exact tile.
+- **Drawing or paint app**: Drive the brush with Simulate Direct Mouse Position and scale stroke width by the Speed expression for pressure-like dynamics.
+- **Slingshot or fishing minigame**: Charge with Is Interact Held, then release into Set Velocity to launch the cursor with momentum.
+- **Hidden-object game**: Rely on the top-layered pick so overlapping clues resolve to the front-most one under the cursor via HoveredUID.
+- **Claw / crane machine**: Constrain to a custom box, drive with Set Velocity, and grab with an interact press.
+- **Tutorial ghost cursor**: Replay scripted points with Simulate Direct Mouse Position to demonstrate UI flows hands-free.
+- **Twin-stick aim**: Read MovingAngle to orient a weapon while the cursor itself is driven by Simulate Axis.
 - **Stealth game**: Use the cursor as a soft, non-lethal detection point that can be hidden behind cover.
 - **Rhythm game**: Use Simulate Control to create timed directional cues and beat-matched cursor movement.
 - **Educational app**: Use the behavior as a simple tutorial cursor to guide learners through a screen.
@@ -704,9 +845,11 @@ Event: On load game
 - **Racing game**: Use smooth follow and clamp logic to preview braking lines, drift markers, and checkpoint pointers.
 - **Co-op lobby**: Use interact presses to highlight players, confirm ready states, and drive shared selection cursors.
 - **Card game**: Use homing and click-style interaction to move a hover cursor across cards and inventory slots.
-- **Sandbox toy**: Use sliding and solid push-out to build playful pointer motion around moving obstacles.
 - **Inventory game**: Use Is Hovering in Point mode to highlight the exact slot under the cursor, then read HoveredUID to grab and drag items with interact presses.
 - **Board game**: Use Is Hovering in Overlap mode so large tiles or zones light up whenever the cursor overlaps them, even when the origin point is near an edge.
+- **Brick-breaker / Pong**: Drive a ball with Set Velocity and turn Bounce on for Solids and Constraints; use On Bounce for hit reactions and SFX.
+- **Pinball / arcade**: Bounce off solid bumpers (Bounce = Solids Only) and read BounceMode to show the active bounce style in a debug HUD.
+- **Screensaver**: A logo drifts and ricochets off the layout edges (Bounce = Constraints Only), changing colour on each On Bounce.
 
 ## 16. Debugger
 

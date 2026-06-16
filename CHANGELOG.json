@@ -33,5 +33,10 @@
     "added": "- Derive Current speed from Position change.\n- Replace \"Set Postion\" with \"Simulate Direct Mouse Position\" ACE",
     "changed": "",
     "fixed": ""
+  },
+  "1.0.5.0": {
+    "added": "- Added Expressions \"Max Speed\" , \"Acceleration\" and \"Deceleration\"\n- Add Bounce support",
+    "changed": "",
+    "fixed": ""
   }
 }

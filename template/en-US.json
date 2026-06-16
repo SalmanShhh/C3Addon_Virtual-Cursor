@@ -47,10 +47,6 @@
             "name": "Default Controls",
             "desc": "If enabled, arrow keys control movement. Otherwise, use the Simulate Control actions to drive movement from the event sheet."
           },
-          "enabled": {
-            "name": "Enabled",
-            "desc": "Whether the behavior is initially enabled or disabled."
-          },
           "hoverMode": {
             "name": "Hover Detection",
             "desc": "How 'Is Hovering' decides the cursor is over an object. Point: the cursor's origin point must be inside the target's collision shape (mouse-like). Overlap: the cursor's own collision shape must overlap the target's.",
@@ -58,6 +54,20 @@
               "point": "Point",
               "overlap": "Overlap"
             }
+          },
+          "bounce": {
+            "name": "Bounce",
+            "desc": "Which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Best with momentum (Set Velocity); held axis input into a wall overrides it.",
+            "items": {
+              "none": "None",
+              "solids": "Solids Only",
+              "constraints": "Constraints Only",
+              "both": "Solids and Constraints"
+            }
+          },
+          "enabled": {
+            "name": "Enabled",
+            "desc": "Whether the behavior is initially enabled or disabled."
           }
         },
         "actions": {
@@ -241,15 +251,15 @@
           "MoveToward": {
             "list-name": "Simulate Direct Mouse Position",
             "display-text": "{my}: Simulate direct mouse position ({0}, {1})",
-            "description": "Sets the movement axis toward a target position. Call every tick to follow a moving target such as the mouse.",
+            "description": "Instantly places the cursor at the given position, like a real mouse pointer. When called every tick (e.g. to follow the mouse or a touch point), it also updates the velocity so VelocityX/Y, Speed, MovingAngle and Is Moving reflect the movement.",
             "params": {
               "targetX": {
-                "name": "Target X",
-                "desc": "X coordinate to move toward"
+                "name": "X",
+                "desc": "X position to place the cursor at"
               },
               "targetY": {
-                "name": "Target Y",
-                "desc": "Y coordinate to move toward"
+                "name": "Y",
+                "desc": "Y position to place the cursor at"
               }
             }
           },
@@ -366,6 +376,23 @@
               "enabled": {
                 "name": "Enabled",
                 "desc": "Whether automatic solid collision is active"
+              }
+            }
+          },
+          "SetBounce": {
+            "list-name": "Set Bounce",
+            "display-text": "{my}: Set bounce {0}",
+            "description": "Chooses which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Works on momentum (e.g. Set Velocity); held axis input into a wall overrides it.",
+            "params": {
+              "mode": {
+                "name": "Mode",
+                "desc": "Which surfaces to bounce off",
+                "items": {
+                  "none": "None",
+                  "solids": "Solids Only",
+                  "constraints": "Constraints Only",
+                  "both": "Solids and Constraints"
+                }
               }
             }
           },
@@ -541,6 +568,12 @@
             "display-text": "{my}: Is enabled",
             "description": "True if the Virtual Cursor behavior is currently active.",
             "params": {}
+          },
+          "OnBounce": {
+            "list-name": "On Bounce",
+            "display-text": "{my}: On Bounce",
+            "description": "Fires when the cursor reflects off a surface it is set to bounce on — a solid, a custom object, or a constraint edge. Fires once per tick.",
+            "params": {}
           }
         },
         "expressions": {
@@ -574,6 +607,11 @@
             "description": "Returns the UID of the front-most (top-layered) instance the cursor is hovering, as found by the most recent 'Is Hovering' check, or -1 if none. Use with System → Pick by UID to act on that instance (e.g. the item to highlight or grab).",
             "params": {}
           },
+          "Acceleration": {
+            "translated-name": "Acceleration",
+            "description": "Returns the current acceleration in pixels per second squared.",
+            "params": {}
+          },
           "AxisX": {
             "translated-name": "AxisX",
             "description": "Returns the current horizontal axis input value (-1 to 1).",
@@ -592,6 +630,16 @@
           "CursorY": {
             "translated-name": "CursorY",
             "description": "Returns the current Y position of the cursor object.",
+            "params": {}
+          },
+          "Deceleration": {
+            "translated-name": "Deceleration",
+            "description": "Returns the current deceleration in pixels per second squared.",
+            "params": {}
+          },
+          "MaxSpeed": {
+            "translated-name": "MaxSpeed",
+            "description": "Returns the current maximum movement speed in pixels per second.",
             "params": {}
           },
           "MovingAngle": {
@@ -622,6 +670,11 @@
           "SolidUID": {
             "translated-name": "SolidUID",
             "description": "Returns the UID of the last solid hit this tick, or -1.",
+            "params": {}
+          },
+          "BounceMode": {
+            "translated-name": "BounceMode",
+            "description": "Returns which Bounce type is active as a token: \"none\", \"solids\", \"constraints\", or \"both\" (solids and constraints).",
             "params": {}
           },
           "ConstraintBottom": {
