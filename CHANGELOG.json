@@ -43,5 +43,10 @@
     "added": "- Add \"Ignore Input\" Toggle.\n- Added Support for Custom \"Button\" Behaviour that's in the works.",
     "changed": "",
     "fixed": ""
+  },
+  "1.0.7.0": {
+    "added": "- Separate reported velocity (_reportVelX/_reportVelY) for the Speed, VelocityX, VelocityY, MovingAngle, and Is Moving ACEs, decoupled from the internal movement integrator.",
+    "changed": "- Set Velocity now updates the reported velocity directly so Speed/Is Moving reflect it the same tick\n- Debugger panel (Speed, VelocityX, VelocityY) now reads the reported velocity, matching the expressions.\n",
+    "fixed": "- Fixed cursor drift with \"Simulate Direct Mouse Position\"/\"Set Position\", especially in Debug preview, direct placement no longer injects coasting velocity into the mover (framerate-independent).\n- \"Is Moving\"/\"Speed\" not updating with the Simulate Mouse actions while working with \"Simulate Control\"  reported velocity now stays valid across the whole event sheet.\n- Fixed \"Is Moving\" reporting stale motion while the cursor is disabled or locked onto a snap-collision homing target."
   }
 }

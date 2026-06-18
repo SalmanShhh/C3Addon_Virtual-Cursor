@@ -8,5 +8,5 @@ export const config = {
 export const expose = true;
 
 export default function () {
-  return Math.hypot(this._velX, this._velY) > 0;
+  return Math.hypot(this._reportVelX, this._reportVelY) > 0;
 }

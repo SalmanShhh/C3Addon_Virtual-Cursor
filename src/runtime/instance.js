@@ -66,10 +66,20 @@ export default function (parentClass) {
       getCursorRegistry().add(this._pointerContract);
 
       // ── Velocity & axis ────────────────────────────────────────────────────
-      // _velX / _velY  — current velocity in px/s, modified each tick
+      // _velX / _velY  — INTEGRATOR velocity in px/s. This is the only velocity
+      //   _moveAndResolve() ever applies to the instance, so anything that should
+      //   not physically push the cursor must NOT write here.
+      // _reportVelX / _reportVelY — REPORTED velocity read by the Speed /
+      //   VelocityX/Y / MovingAngle / Is Moving ACEs. For axis & smooth-mouse
+      //   movement it mirrors the integrator velocity; for direct positioning
+      //   (Simulate Direct Mouse Position / Set Position) it carries the derived
+      //   Δpos/dt while the integrator stays at zero — so reporting a velocity
+      //   never makes the mover coast. See _setPosition() and the end of _tick().
       // _axisX / _axisY — normalised input direction (-1..1), set via ACEs
       this._velX  = 0;
       this._velY  = 0;
+      this._reportVelX = 0;
+      this._reportVelY = 0;
       this._axisX = 0;
       this._axisY = 0;
 
@@ -248,24 +258,38 @@ export default function (parentClass) {
     }
 
     /**
-     * Teleports the cursor to (x, y) and derives a velocity from the move so the
-     * VelocityX/Y, Speed, MovingAngle and Is Moving ACEs reflect it.
+     * Teleports the cursor to (x, y) and derives a REPORTED velocity from the
+     * move so the VelocityX/Y, Speed, MovingAngle and Is Moving ACEs reflect it.
      *
-     * Velocity is measured against the PREVIOUS Set Position (not the live
-     * position, which the tick loop may have nudged just before the event sheet
-     * ran) and only when Set Position was also called on the previous tick. That
-     * gives a stable reading when the cursor is driven by calling Set Position
-     * every tick, while a one-off teleport imparts no velocity — so it can't
-     * fling the cursor afterwards.
+     * Crucially the derived value goes into _reportVelX/Y, NOT the integrator's
+     * _velX/_velY, and the integrator velocity is zeroed. Direct positioning is a
+     * teleport: if it wrote the integrator velocity, _moveAndResolve() would
+     * coast the cursor along that velocity on the following tick(s), which under
+     * a variable framerate (e.g. Debug preview) never cancels cleanly and shows
+     * up as drift. Zeroing _velX/_velY here keeps the teleport purely positional.
+     *
+     * Reported velocity is measured against the PREVIOUS Set Position (not the
+     * live position, which the tick loop may have nudged just before the event
+     * sheet ran) and only when Set Position was also called on the previous tick.
+     * That gives a stable reading when the cursor is driven by calling Set
+     * Position every tick, while a one-off teleport reports no velocity.
      */
     _setPosition(x, y) {
       const inst = this.instance;
       const dt   = this.runtime.dt;
 
       if (dt > 0 && this._hasLastSetPos && this._setPosWasCalledLastTick) {
-        this._velX = (x - this._lastSetPosX) / dt;
-        this._velY = (y - this._lastSetPosY) / dt;
+        this._reportVelX = (x - this._lastSetPosX) / dt;
+        this._reportVelY = (y - this._lastSetPosY) / dt;
+      } else {
+        // One-off teleport (or first of a run): no movement to report yet.
+        this._reportVelX = 0;
+        this._reportVelY = 0;
       }
+      // The cursor is being placed, not pushed — kill any integrator velocity so
+      // the mover can't coast/drift on the next tick.
+      this._velX = 0;
+      this._velY = 0;
 
       this._lastSetPosX          = x;
       this._lastSetPosY          = y;
@@ -287,7 +311,15 @@ export default function (parentClass) {
       this._setPosWasCalledLastTick = this._setPosCalledThisTick;
       this._setPosCalledThisTick    = false;
 
-      if (!this._enabled) return;
+      if (!this._enabled) {
+        // A disabled cursor isn't moving — clear the reported velocity so
+        // Is Moving / Speed / VelocityX/Y / MovingAngle don't report stale
+        // motion while frozen. Covers every disable path (action, debugger,
+        // property) since they all funnel through this early-out.
+        this._reportVelX = 0;
+        this._reportVelY = 0;
+        return;
+      }
 
       const dt = this.runtime.dt; // seconds elapsed this frame
       this._homingHandledThisTick  = false;
@@ -452,6 +484,22 @@ export default function (parentClass) {
 
       // Fire once per tick if any surface actually reflected the cursor.
       if (this._bouncedThisTick) this._trigger("OnBounce");
+
+      // Reported velocity mirrors the integrator for axis / smooth-mouse / coast
+      // movement, so Speed / Is Moving stay valid across the WHOLE event sheet
+      // (the integrator is computed here, before any event runs).
+      //
+      // Skip the mirror when direct positioning drove the cursor last tick: there
+      // the integrator is parked at zero and _setPosition() owns the reported
+      // velocity (its derived Δpos/dt, set during the event sheet). Without this
+      // guard the mirror would reset reportVel to 0 every _tick, so Is Moving
+      // would read false until the Simulate Direct Mouse Position action ran
+      // later in the sheet — the exact asymmetry vs Simulate Control, whose
+      // velocity lives in the integrator and is therefore already mirrored here.
+      if (!this._setPosWasCalledLastTick) {
+        this._reportVelX = this._velX;
+        this._reportVelY = this._velY;
+      }
     }
 
     /**
@@ -658,11 +706,16 @@ export default function (parentClass) {
             this._velY *= s;
           }
         } else {
-          // No directional input: snap and lock onto the target.
+          // No directional input: snap and lock onto the target. The cursor is
+          // now at rest on the target, so clear the reported velocity too —
+          // collision-snap runs in _tick2() (after _tick's mirror), so without
+          // this Is Moving / Speed would read stale motion while locked.
           this.instance.x = target.inst.x;
           this.instance.y = target.inst.y;
           this._velX = 0;
           this._velY = 0;
+          this._reportVelX = 0;
+          this._reportVelY = 0;
           this._trigger("OnHomingSnapped");
         }
       } else {
@@ -943,7 +996,9 @@ export default function (parentClass) {
 
     _getDebuggerProperties(){
       const DIR_LABELS = ["Up & Down", "Left & Right", "4 Directions", "8 Directions"];
-      const speed = Math.hypot(this._velX, this._velY);
+      // Report the same velocity the Speed / VelocityX/Y ACEs expose, so the
+      // panel matches the expressions even when driven by direct positioning.
+      const speed = Math.hypot(this._reportVelX, this._reportVelY);
 
       return [{
         title: "$" + this.behaviorType.name,
@@ -956,8 +1011,8 @@ export default function (parentClass) {
           { name: "$Acceleration",    value: this._acceleration,    onedit: v => this._acceleration    = Math.max(0, v) },
           { name: "$Deceleration",    value: this._deceleration,    onedit: v => this._deceleration    = Math.max(0, v) },
           { name: "$Speed",           value: Math.round(speed) },
-          { name: "$VelocityX",       value: Math.round(this._velX) },
-          { name: "$VelocityY",       value: Math.round(this._velY) },
+          { name: "$VelocityX",       value: Math.round(this._reportVelX) },
+          { name: "$VelocityY",       value: Math.round(this._reportVelY) },
           { name: "$AxisX",           value: this._axisX },
           { name: "$AxisY",           value: this._axisY },
           { name: "$LastPressed",     value: this._lastInteractPressedId  || "—" },
@@ -986,6 +1041,8 @@ export default function (parentClass) {
     _loadFromJson(o) {
       this._velX  = 0;
       this._velY  = 0;
+      this._reportVelX = 0;
+      this._reportVelY = 0;
       this._axisX = 0;
       this._axisY = 0;
       // Clear all held interact states so no button appears stuck after a load.

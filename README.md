@@ -1,15 +1,19 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.0.6.0
+### Version 1.0.7.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.6.0.c3addon/salmanshh_virtual_cursor-1.0.6.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.0.7.0.c3addon/salmanshh_virtual_cursor-1.0.7.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.0.6.0
-- **Added:** - Add "Ignore Input" Toggle.
-- **Added:** - Added Support for Custom "Button" Behaviour that's in the works.
+#### What's New in 1.0.7.0
+- **Added:** - Separate reported velocity (_reportVelX/_reportVelY) for the Speed, VelocityX, VelocityY, MovingAngle, and Is Moving ACEs, decoupled from the internal movement integrator.
+- **Changed:** - Set Velocity now updates the reported velocity directly so Speed/Is Moving reflect it the same tick
+- **Changed:** - Debugger panel (Speed, VelocityX, VelocityY) now reads the reported velocity, matching the expressions.
+- **Fixed:** - Fixed cursor drift with "Simulate Direct Mouse Position"/"Set Position", especially in Debug preview, direct placement no longer injects coasting velocity into the mover (framerate-independent).
+- **Fixed:** - "Is Moving"/"Speed" not updating with the Simulate Mouse actions while working with "Simulate Control"  reported velocity now stays valid across the whole event sheet.
+- **Fixed:** - Fixed "Is Moving" reporting stale motion while the cursor is disabled or locked onto a snap-collision homing target.
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -150,6 +154,14 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.0.7.0**
+- **Added:** - Separate reported velocity (_reportVelX/_reportVelY) for the Speed, VelocityX, VelocityY, MovingAngle, and Is Moving ACEs, decoupled from the internal movement integrator.
+- **Changed:** - Set Velocity now updates the reported velocity directly so Speed/Is Moving reflect it the same tick
+- **Changed:** - Debugger panel (Speed, VelocityX, VelocityY) now reads the reported velocity, matching the expressions.
+- **Fixed:** - Fixed cursor drift with "Simulate Direct Mouse Position"/"Set Position", especially in Debug preview, direct placement no longer injects coasting velocity into the mover (framerate-independent).
+- **Fixed:** - "Is Moving"/"Speed" not updating with the Simulate Mouse actions while working with "Simulate Control"  reported velocity now stays valid across the whole event sheet.
+- **Fixed:** - Fixed "Is Moving" reporting stale motion while the cursor is disabled or locked onto a snap-collision homing target.
 
 **1.0.6.0**
 - **Added:** - Add "Ignore Input" Toggle.

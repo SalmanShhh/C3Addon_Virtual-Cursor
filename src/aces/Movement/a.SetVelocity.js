@@ -25,4 +25,8 @@ export const expose = true;
 export default function (velX, velY) {
   this._velX = velX;
   this._velY = velY;
+  // Keep the reported velocity (Speed / VelocityX/Y / MovingAngle) in sync so it
+  // reflects the new value the same tick rather than lagging until _tick() runs.
+  this._reportVelX = velX;
+  this._reportVelY = velY;
 }
