@@ -379,6 +379,18 @@
               }
             }
           },
+          "ClearCircularConstraint": {
+            "list-name": "Clear Circular Constraint",
+            "display-text": "{my}: Clear circular constraint",
+            "description": "Removes the circular constraint so the cursor moves freely again (the rectangular layout constraint, if any, still applies).",
+            "params": {}
+          },
+          "ResetCircularRotation": {
+            "list-name": "Reset Circular Rotation",
+            "display-text": "{my}: Reset circular rotation counter",
+            "description": "Zeroes the accumulated rotation (ConstraintRotation / ConstraintRevolutions). Call it when a spin challenge starts, or between the stages of a combination lock.",
+            "params": {}
+          },
           "SetBounce": {
             "list-name": "Set Bounce",
             "display-text": "{my}: Set bounce {0}",
@@ -393,6 +405,44 @@
                   "constraints": "Constraints Only",
                   "both": "Solids and Constraints"
                 }
+              }
+            }
+          },
+          "SetCircularConstraint": {
+            "list-name": "Set Circular Constraint",
+            "display-text": "{my}: Constrain to circle at ({0}, {1}) radius {2} – {3}",
+            "description": "Confines the cursor to a ring band around a center point. Set Min = Max to lock it to a ring it can only spin around (dials, wheels); set Min = 0 to let it roam a disc and snap back at Max (slingshot pull, joystick). Call every tick with an object's X,Y to make the center follow it.",
+            "params": {
+              "cx": {
+                "name": "Center X",
+                "desc": "X position of the circle's center, in pixels"
+              },
+              "cy": {
+                "name": "Center Y",
+                "desc": "Y position of the circle's center, in pixels"
+              },
+              "minRadius": {
+                "name": "Min Radius",
+                "desc": "Inner radius in pixels. 0 = a full disc; equal to Max = a locked ring."
+              },
+              "maxRadius": {
+                "name": "Max Radius",
+                "desc": "Outer radius in pixels — the cursor can never get further than this from the center."
+              }
+            }
+          },
+          "SetCircularReturn": {
+            "list-name": "Set Circular Return",
+            "display-text": "{my}: Set circular return strength {0} home angle {1}",
+            "description": "Makes the cursor spring back to its rest position on the circular constraint when the player stops steering or dragging it. For a pull disc (Min radius 0) it snaps back to the center/origin (like an analog stick); for a ring or dial it returns to the given home angle (a self-centering steering wheel). Strength 0 disables it; higher is snappier. Requires an active circular constraint.",
+            "params": {
+              "strength": {
+                "name": "Strength",
+                "desc": "How strongly/quickly the cursor returns to rest. 0 = off, ~0.3–0.6 typical, higher = snappier."
+              },
+              "homeAngle": {
+                "name": "Home Angle",
+                "desc": "Angle in degrees the cursor returns to on a ring/annulus (the 'straight' position). Ignored for a disc, which returns to the center."
               }
             }
           },
@@ -578,6 +628,12 @@
             "description": "Fires when the cursor collides with a solid object and is pushed out.",
             "params": {}
           },
+          "IsCircularConstraintActive": {
+            "list-name": "Is Circular Constraint Active",
+            "display-text": "{my}: Circular constraint is active",
+            "description": "True while a circular constraint is set (via Set Circular Constraint).",
+            "params": {}
+          },
           "IsEnabled": {
             "list-name": "Is Enabled",
             "display-text": "{my}: Is enabled",
@@ -595,6 +651,22 @@
             "display-text": "{my}: On Bounce",
             "description": "Fires when the cursor reflects off a surface it is set to bounce on — a solid, a custom object, or a constraint edge. Fires once per tick.",
             "params": {}
+          },
+          "OnCircularEdgeHit": {
+            "list-name": "On Circular Edge Hit",
+            "display-text": "{my}: On circular {0} edge hit",
+            "description": "Fires when the cursor first reaches the edge of the circular constraint. Outer = pushed out to Max radius (e.g. slingshot fully drawn); Inner = pulled in to Min radius.",
+            "params": {
+              "edge": {
+                "name": "Edge",
+                "desc": "Which edge to fire for",
+                "items": {
+                  "any": "Any",
+                  "outer": "Outer (max radius)",
+                  "inner": "Inner (min radius)"
+                }
+              }
+            }
           }
         },
         "expressions": {
@@ -698,9 +770,29 @@
             "description": "Returns which Bounce type is active as a token: \"none\", \"solids\", \"constraints\", or \"both\" (solids and constraints).",
             "params": {}
           },
+          "ConstraintAngle": {
+            "translated-name": "ConstraintAngle",
+            "description": "Angle in degrees (0–360) from the circular constraint's center to the cursor. The dial/spin angle. Returns 0 when no circular constraint is active.",
+            "params": {}
+          },
           "ConstraintBottom": {
             "translated-name": "ConstraintBottom",
             "description": "Returns the bottom edge of the active constraint region.",
+            "params": {}
+          },
+          "ConstraintCenterX": {
+            "translated-name": "ConstraintCenterX",
+            "description": "X position of the circular constraint's center. Returns 0 when no circular constraint is active.",
+            "params": {}
+          },
+          "ConstraintCenterY": {
+            "translated-name": "ConstraintCenterY",
+            "description": "Y position of the circular constraint's center. Returns 0 when no circular constraint is active.",
+            "params": {}
+          },
+          "ConstraintDistance": {
+            "translated-name": "ConstraintDistance",
+            "description": "Current distance in pixels from the circular constraint's center to the cursor. The pull / draw length. Returns 0 when no circular constraint is active.",
             "params": {}
           },
           "ConstraintLeft": {
@@ -708,9 +800,34 @@
             "description": "Returns the left edge of the active constraint region.",
             "params": {}
           },
+          "ConstraintMaxRadius": {
+            "translated-name": "ConstraintMaxRadius",
+            "description": "Outer radius of the active circular constraint, in pixels — handy for sizing a boundary ring sprite. Returns 0 when no circular constraint is active.",
+            "params": {}
+          },
+          "ConstraintMinRadius": {
+            "translated-name": "ConstraintMinRadius",
+            "description": "Inner radius of the active circular constraint, in pixels. Returns 0 when no circular constraint is active.",
+            "params": {}
+          },
+          "ConstraintPull": {
+            "translated-name": "ConstraintPull",
+            "description": "How far the cursor is drawn within the constraint band, normalized 0–1 (0 = at Min radius, 1 = at Max radius). Ideal for slingshot/joystick power. Returns 0 when inactive or Min equals Max.",
+            "params": {}
+          },
+          "ConstraintRevolutions": {
+            "translated-name": "ConstraintRevolutions",
+            "description": "Accumulated rotation expressed as full turns (ConstraintRotation / 360) — signed and fractional, e.g. 1.5 = one and a half turns one way, -3 = three turns the other. Ideal for 'spin N times to unlock' checks. Zero it with Reset Circular Rotation.",
+            "params": {}
+          },
           "ConstraintRight": {
             "translated-name": "ConstraintRight",
             "description": "Returns the right edge of the active constraint region.",
+            "params": {}
+          },
+          "ConstraintRotation": {
+            "translated-name": "ConstraintRotation",
+            "description": "Total accumulated rotation in degrees while a circular constraint is active — signed (one spin direction adds, the other subtracts) and unbounded, so a full turn reads 360, two turns 720. Use abs() if direction doesn't matter. Zero it with Reset Circular Rotation.",
             "params": {}
           },
           "ConstraintTop": {

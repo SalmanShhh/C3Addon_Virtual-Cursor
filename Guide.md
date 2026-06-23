@@ -181,6 +181,27 @@ Event: On start of layout
   Action: Virtual Cursor -> Set Solid Collision true
 ```
 
+### Circular constraints
+
+Beyond the rectangular clamp, **Set Circular Constraint** (center X, Y, min radius, max radius) confines the cursor to a ring band around a center point. This drives two families of mini-game:
+
+- **Spin** (Min = Max): the cursor is pinned to a ring and can only orbit the center — dials, knobs, steering wheels, reel cranks. Read **ConstraintAngle** for the dial angle.
+- **Pull** (Min = 0): the cursor roams a disc and snaps back to the rim past Max — slingshots, analog sticks, charge meters. Read **ConstraintPull** (0–1) for power and **ConstraintAngle** for aim.
+
+Update the center every tick (e.g. with an object's X, Y) to make the constraint follow a moving anchor, and **On Circular Edge Hit** fires when the cursor reaches the inner or outer edge.
+
+While a circular constraint is active the cursor's rotation around the center is tracked automatically: **ConstraintRotation** sums the signed degrees turned (unbounded — 360 per full turn, negative for the other direction) and **ConstraintRevolutions** reports the same as full turns. Wrap-around past 0°/360° is handled, so this is the reliable way to build spin-to-unlock dials and combination locks without tracking the previous angle yourself. **Reset Circular Rotation** zeroes the counter — call it when a challenge starts or between combination-lock stages.
+
+**Set Circular Return** makes the cursor spring back to a rest position the moment the player stops steering or dragging it — auto-centering. For a pull disc (Min = 0) it snaps back to the center/origin (an analog stick returning to neutral); for a ring or dial it eases to a home angle (a self-centering steering wheel). The strength controls how snappy the return feels; 0 disables it. The player's own input always wins while active — the spring only takes over once they let go.
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+
+Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 3
+  Action: Safe -> unlock
+```
+
 ## 8. Default Controls and Simulated Input
 
 The default arrow key path is great for quick prototypes. The simulated path is best when the inputs are coming from events, AI, or a custom control system.
@@ -270,6 +291,10 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Default Controls | Enables or disables arrow-key input. |
 | Set Ignoring Input | Freezes all movement input — arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
 | Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
+| Set Circular Constraint | Confines the cursor to a ring band around a center point — Min = Max locks it to a ring to spin (dials, wheels, cranks); Min = 0 makes a pull disc (slingshot, joystick). |
+| Clear Circular Constraint | Removes the circular constraint so the cursor moves freely again. |
+| Reset Circular Rotation | Zeroes the accumulated rotation counter (ConstraintRotation / ConstraintRevolutions). |
+| Set Circular Return | Springs the cursor back to its rest position when input stops — the center/origin for a disc (analog stick), or a home angle for a ring (self-centering wheel). Strength 0 disables. |
 
 ### Hover
 
@@ -305,6 +330,8 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Bounce | Triggers when the cursor reflects off a surface it's set to bounce on (solid, custom object, or constraint edge). Fires once per tick. |
 | Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode). When several overlap, the front-most (top-layered) one is recorded in HoveredUID. Hidden instances and instances on hidden layers are ignored. |
 | Is Ignoring Input | Returns true while movement input is frozen (set via Set Ignoring Input). |
+| Is Circular Constraint Active | Returns true while a circular constraint is set. |
+| On Circular Edge Hit | Triggers when the cursor first reaches the circular constraint's edge — filterable by Outer (max radius), Inner (min radius), or Any. |
 
 ## 12. Expressions Reference
 
@@ -327,7 +354,14 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | CountHomingTargets | Number | Number of currently registered targets. |
 | SolidUID | Number | UID of the most recent solid hit. |
 | CountSolids | Number | Number of registered solid blockers. |
-| ConstraintLeft / Top / Right / Bottom | Number | The current clamp box values. |
+| ConstraintLeft / Top / Right / Bottom | Number | The current rectangular clamp box values. |
+| ConstraintCenterX / CenterY | Number | Center position of the active circular constraint. |
+| ConstraintMinRadius / MaxRadius | Number | Inner and outer radius of the active circular constraint. |
+| ConstraintAngle | Number | Angle (degrees, 0–360) from the circular constraint's center to the cursor — the dial/spin angle. |
+| ConstraintDistance | Number | Distance in pixels from the circular constraint's center to the cursor — the pull/draw length. |
+| ConstraintPull | Number | How far the cursor is drawn within the band, 0–1 (0 = Min radius, 1 = Max radius). |
+| ConstraintRotation | Number | Total accumulated rotation in degrees around the center while a circular constraint is active (signed, unbounded — 360 = one full turn). |
+| ConstraintRevolutions | Number | Accumulated rotation as full turns (ConstraintRotation / 360), signed and fractional. |
 | BounceMode | String | Active Bounce type token: "none", "solids", "constraints", or "both". |
 
 ## 13. System Use Cases
@@ -827,6 +861,151 @@ Event: On load game
       Action: Virtual Cursor -> Set Position (PanTarget.X, PanTarget.Y)
     ```
 
+40. **Spin dial / combination lock**  
+    **Scenario:** Lock the cursor to a ring around a dial so the player can only rotate it, and turn the dial sprite to match. Setting Min equal to Max pins the cursor to the ring.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 90, 90)
+
+    Event: Every tick
+      Action: Dial -> Set angle Virtual Cursor.ConstraintAngle
+    ```
+
+41. **Slingshot / bow launcher**  
+    **Scenario:** Pull the cursor back inside a disc (Min = 0) to aim and charge, then release to fire from the anchor in the opposite direction with power scaled by how far it was drawn.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Anchor.X, Anchor.Y, 0, 140)
+
+    Event: Virtual Cursor -> On Interact Released "fire"
+      Action: System -> Create Projectile at (Anchor.X, Anchor.Y)
+      Action: Projectile -> Set Bullet speed (Virtual Cursor.ConstraintPull * 900)
+      Action: Projectile -> Set Bullet angle of motion (Virtual Cursor.ConstraintAngle + 180)
+    ```
+
+42. **On-screen analog stick (snaps back to center)**  
+    **Scenario:** A draggable knob constrained to a disc acts as a virtual joystick. While touched it follows the finger; the moment it's released it springs back to the center. Feed its angle and pull into the player's movement.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (StickBase.X, StickBase.Y, 0, 80)
+      Action: Virtual Cursor -> Set Circular Return (0.6, 0)        // snaps back to the origin on release
+
+    Event: Touch -> Is touching StickArea
+      Action: Virtual Cursor -> Simulate Mouse (Touch.X, Touch.Y, 0.5)   // follow the finger (clamped to the disc)
+
+    Event: Every tick
+      Action: Knob -> Set position to (Virtual Cursor.CursorX, Virtual Cursor.CursorY)
+
+    Event: System -> Compare: Virtual Cursor.ConstraintPull > 0.15
+      Action: Player -> Set position to (Player.X + cos(Virtual Cursor.ConstraintAngle) * Virtual Cursor.ConstraintPull * 300 * dt, Player.Y + sin(Virtual Cursor.ConstraintAngle) * Virtual Cursor.ConstraintPull * 300 * dt)
+    ```
+
+43. **Radial (pie) menu**  
+    **Scenario:** Open a ring menu, lock the cursor to it, and select a wedge from the angle the cursor points at — six options means 60° per wedge.  
+    **Event sheet:**
+    ```text
+    Event: On menu open
+      Action: Virtual Cursor -> Set Circular Constraint (MenuCenter.X, MenuCenter.Y, 70, 70)
+
+    Event: Every tick
+      Action: System -> Set HighlightedOption to int(Virtual Cursor.ConstraintAngle / 60)
+
+    Event: Virtual Cursor -> On Interact Pressed "select"
+      Action: System -> Run option HighlightedOption
+    ```
+
+44. **Steering wheel / ship helm (self-centering)**  
+    **Scenario:** Turn a wheel by orbiting the cursor around its hub and read the wheel angle as a steering value. Let go and it springs back to "straight" on its own.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Wheel.X, Wheel.Y, 110, 110)
+      Action: Virtual Cursor -> Set Circular Return (0.4, 270)      // 270° = 12 o'clock = straight ahead
+
+    Event: Every tick
+      Action: Wheel -> Set angle Virtual Cursor.ConstraintAngle
+      Action: System -> Set SteerInput to cos(Virtual Cursor.ConstraintAngle)   // -1 (left) .. 1 (right)
+    ```
+
+45. **Leash that follows a moving anchor**  
+    **Scenario:** Keep the cursor inside a ring band around a moving companion — never closer than 40px, never further than 120px — by updating the center every tick so the tether drags along.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+      Action: Virtual Cursor -> Set Circular Constraint (Companion.X, Companion.Y, 40, 120)
+    ```
+
+46. **Fishing reel crank**  
+    **Scenario:** Lock the cursor to a ring so the player cranks it in circles; the behavior tracks how far it has turned automatically, so the line reels in by total turns — no manual angle bookkeeping.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Reel.X, Reel.Y, 60, 60)
+      Action: Virtual Cursor -> Reset Circular Rotation
+
+    Event: Every tick
+      Action: FishingLine -> Set length (StartLength - abs(Virtual Cursor.ConstraintRevolutions) * 50)
+
+    Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 6
+      Action: System -> Trigger once -> Land the fish
+    ```
+
+47. **Draw-power meter with full-draw cue**  
+    **Scenario:** Fill a power bar as the cursor is pulled out, and flash a cue the moment it reaches the outer edge (fully drawn).  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Bow.X, Bow.Y, 0, 160)
+
+    Event: Every tick
+      Action: PowerBar -> Set width (Virtual Cursor.ConstraintPull * 200)
+
+    Event: Virtual Cursor -> On Circular Edge Hit (Outer)
+      Action: Play "max_draw" sound
+      Action: PowerBar -> Flash
+    ```
+
+48. **Spin-to-unlock dial**  
+    **Scenario:** Lock the cursor to a dial and unlock once the player has spun it three full turns in either direction. The behavior accumulates the rotation for you across the 0°/360° seam.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+      Action: Virtual Cursor -> Reset Circular Rotation
+
+    Event: Every tick
+      Action: Dial -> Set angle Virtual Cursor.ConstraintAngle
+
+    Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 3
+        Sub-event: System -> Trigger once
+          Action: Vault -> Set animation "Open"
+          Action: Virtual Cursor -> Clear Circular Constraint
+    ```
+
+49. **Directional combination safe**  
+    **Scenario:** A multi-stage safe lock: turn 2 full turns one way, then 1.5 turns back the other way. Reset the counter between stages and use the SIGN of the rotation to enforce direction.  
+    **Event sheet:**
+    ```text
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+      Action: Virtual Cursor -> Reset Circular Rotation
+      Action: System -> Set Stage to 0
+
+    Event: System -> Stage = 0
+        Condition: System -> Compare: Virtual Cursor.ConstraintRevolutions >= 2     // clockwise
+      Action: System -> Set Stage to 1
+      Action: Virtual Cursor -> Reset Circular Rotation
+      Action: Play "tumbler_click" sound
+
+    Event: System -> Stage = 1
+        Condition: System -> Compare: Virtual Cursor.ConstraintRevolutions <= -1.5   // back the other way
+      Action: System -> Set Stage to 2
+      Action: Vault -> Set animation "Open"
+    ```
+
 ## 15. Other Game Use Cases
 
 - **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
@@ -867,6 +1046,11 @@ Event: On load game
 - **Brick-breaker / Pong**: Drive a ball with Set Velocity and turn Bounce on for Solids and Constraints; use On Bounce for hit reactions and SFX.
 - **Pinball / arcade**: Bounce off solid bumpers (Bounce = Solids Only) and read BounceMode to show the active bounce style in a debug HUD.
 - **Screensaver**: A logo drifts and ricochets off the layout edges (Bounce = Constraints Only), changing colour on each On Bounce.
+- **Dial / combination-lock puzzle**: Lock the cursor to a ring (Min = Max) and read ConstraintRevolutions to unlock after N spins; use its sign for direction-based combinations.
+- **Radial menu / weapon wheel**: Pin the cursor to a ring and pick the highlighted wedge from ConstraintAngle, confirm with an interact press.
+- **Slingshot / catapult**: Constrain to a disc (Min = 0); read ConstraintPull for power and ConstraintAngle for aim, then fire on the interact release.
+- **On-screen analog stick**: A knob constrained to a disc feeds ConstraintAngle and ConstraintPull into player movement for twin-stick or mobile controls.
+- **Crank / winch mechanic**: A reel locked to a ring uses ConstraintRevolutions to reel in a line, raise a drawbridge, or wind a spring.
 
 ## 16. Debugger
 
@@ -879,6 +1063,7 @@ The main debugger view shows:
 - Max Speed, Acceleration, and Deceleration
 - Current speed, velocity, and axis values
 - Last interact pressed and released IDs
+- Circular constraint state and accumulated rotation (degrees)
 
 ## 17. Tips and Common Mistakes
 

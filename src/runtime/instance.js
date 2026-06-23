@@ -162,6 +162,44 @@ export default function (parentClass) {
       this._atLayoutEdge       = false; // Edge-hit trigger fires only on transition false→true
       this._constraintBounds   = null;  // null | { left, top, right, bottom }
 
+      // ── Circular constraint ───────────────────────────────────────────────
+      // Optional: confines the cursor to a ring band (annulus) around a center
+      // point — each tick its distance from (cx,cy) is clamped into the
+      // [minRadius, maxRadius] band. Powers two circular mini-game styles:
+      //   • minRadius == maxRadius → the cursor is locked to a ring and can only
+      //     orbit the center (spin dials, knobs, steering wheels, reel cranks).
+      //   • minRadius == 0         → the cursor roams a disc and snaps back to
+      //     the rim past maxRadius (radial pull, slingshot draw, analog stick).
+      // null = off. Set via Set Circular Constraint; applied AFTER the
+      // rectangular layout clamp each tick so the circle wins when both are on.
+      this._circularConstraint = null;  // null | { cx, cy, minRadius, maxRadius }
+      this._atCircularEdge     = false; // true while clamped to an edge (drives the trigger)
+      this._circularEdge       = 0;     // edge last hit: 0 none, 1 outer (max), -1 inner (min)
+
+      // ── Accumulated rotation ──────────────────────────────────────────────
+      // While a circular constraint is active, the cursor's angle around the
+      // center is tracked frame-to-frame and summed into _totalRotation
+      // (signed degrees: one spin direction adds, the other subtracts). Wrap
+      // across 0°/360° is handled, so a continuous spin keeps counting up past
+      // 360. Read via ConstraintRotation / ConstraintRevolutions to build
+      // spin-to-unlock dials, safe combinations, and reel cranks; zero it with
+      // Reset Circular Rotation. Persists until reset (not saved across load).
+      this._totalRotation = 0;     // signed accumulated rotation in degrees
+      this._prevRotAngle  = 0;     // previous frame's center→cursor angle (deg)
+      this._rotCenterX    = 0;     // center the prev angle was measured against
+      this._rotCenterY    = 0;
+      this._hasRotAngle   = false; // false = (re)seed prev angle next frame, count nothing
+
+      // ── Circular return (auto-centering) ──────────────────────────────────
+      // When >0 and a circular constraint is active, the cursor eases back to a
+      // rest position on the constraint the moment the player stops steering /
+      // dragging it — like an analog stick or self-centering steering wheel.
+      // The rest point is polar (minRadius, returnAngle) around the center, so a
+      // pull disc (minRadius 0) returns to the center and a ring/dial returns to
+      // a home angle. 0 = off. Set via Set Circular Return.
+      this._circularReturnStrength = 0; // 0 = off; ~0.3–0.6 typical, higher = snappier
+      this._returnAngle            = 0; // home angle (deg) for ring/annulus centering
+
       // ── Simulated axis (Simulate Controls category) ────────────────────
       // SimulateControl sets these each tick it is called, then _tick()
       // consumes and clears them.  If not called for a tick the effective
@@ -437,6 +475,15 @@ export default function (parentClass) {
         const newSpeed = Math.min(curSpeed + this._acceleration * dt, this._maxSpeed);
         this._velX = normX * newSpeed;
         this._velY = normY * newSpeed;
+      } else if (this._circularReturnStrength > 0 && this._circularConstraint && !this._ignoringInput) {
+        // No input, and circular return is on — ease the cursor back to its rest
+        // position on the constraint (the center/origin for a disc, the home
+        // angle for a ring) instead of just coasting to a stop. Reaching this
+        // branch already means no axis/mouse input drove the cursor this tick;
+        // a per-tick Set Position drag still overrides this since it zeroes the
+        // velocity and teleports AFTER _tick, so the spring only acts once the
+        // player lets go. See _applyCircularReturn().
+        this._applyCircularReturn();
       } else {
         // No input — decelerate proportionally along the current velocity direction
         const curSpeed = Math.hypot(this._velX, this._velY);
@@ -479,8 +526,11 @@ export default function (parentClass) {
       this._solidUID        = -1;
       this._moveAndResolve();
 
-      // ── 5. Layout boundary clamping ───────────────────────────────────────
+      // ── 5. Boundary clamping ──────────────────────────────────────────────
+      // Rectangular first, then the circular ring band so the circle has the
+      // final say on position when both constraints are active.
       this._applyLayoutConstraint();
+      this._applyCircularConstraint();
 
       // Fire once per tick if any surface actually reflected the cursor.
       if (this._bouncedThisTick) this._trigger("OnBounce");
@@ -987,6 +1037,186 @@ export default function (parentClass) {
       }
     }
 
+    /**
+     * Eases the cursor back toward its rest position on the active circular
+     * constraint — auto-centering, like an analog stick springing to neutral or
+     * a steering wheel returning to straight. Runs only from the idle branch of
+     * _tick (no axis/mouse input this frame), so the player's own steering or
+     * dragging always wins; the spring takes over the instant they let go.
+     *
+     * The rest point is polar (minRadius, returnAngle) around the center:
+     *   • a pull disc (minRadius 0) → the center / origin (returnAngle unused);
+     *   • a ring or annulus         → the point at returnAngle on the inner ring,
+     *     i.e. the wheel's "straight ahead" home position.
+     * It steers velocity toward that point (the same seek-then-settle used by
+     * Steer homing), so motion stays smooth and the circular clamp turns the
+     * straight-line pull into a glide along the ring for the wheel case.
+     * returnStrength scales both the pull speed and how snappy the return feels.
+     */
+    _applyCircularReturn() {
+      const cc   = this._circularConstraint;
+      const inst = this.instance;
+      const dt   = this.runtime.dt;
+
+      // Rest point in cartesian space.
+      const a     = this._returnAngle * (Math.PI / 180);
+      const restX = cc.cx + Math.cos(a) * cc.minRadius;
+      const restY = cc.cy + Math.sin(a) * cc.minRadius;
+
+      const dx    = restX - inst.x;
+      const dy    = restY - inst.y;
+      const dist  = Math.hypot(dx, dy);
+      const speed = Math.hypot(this._velX, this._velY);
+
+      // Close and slow → settle exactly on the rest point so it lands cleanly
+      // instead of oscillating. The threshold scales with frame distance.
+      const settle = Math.max(2, this._maxSpeed * dt * 1.5);
+      if (dist <= settle && speed < this._maxSpeed * 0.2) {
+        inst.x = restX;
+        inst.y = restY;
+        this._velX = 0;
+        this._velY = 0;
+        return;
+      }
+
+      // Seek the rest point: blend current velocity toward the desired velocity.
+      const dirX      = dx / dist;
+      const dirY      = dy / dist;
+      const desiredVX = dirX * this._maxSpeed * this._circularReturnStrength;
+      const desiredVY = dirY * this._maxSpeed * this._circularReturnStrength;
+      const blend     = Math.min(1, this._circularReturnStrength * 6 * dt);
+      this._velX += (desiredVX - this._velX) * blend;
+      this._velY += (desiredVY - this._velY) * blend;
+    }
+
+    /**
+     * Confines the cursor to a ring band (annulus) around a center point: each
+     * tick its distance from (cx, cy) is clamped into [minRadius, maxRadius].
+     *
+     * This single clamp powers both circular mini-game styles:
+     *   • minRadius == maxRadius → the cursor is pinned to a ring and only its
+     *     orbital (tangential) motion survives, so it spins around the center —
+     *     dials, knobs, steering wheels, fishing-reel cranks.
+     *   • minRadius == 0         → the cursor roams freely inside the disc and
+     *     snaps to the rim when pushed past maxRadius — radial pull, slingshot
+     *     draw, analog joystick. Read ConstraintPull / Angle to drive gameplay.
+     *
+     * Only the radial velocity component heading further past the edge it hit is
+     * touched; the tangential component is preserved so a spin keeps spinning and
+     * the cursor glides along the ring instead of sticking. With constraint
+     * bounce on, that radial component is reflected (lossless rebound) instead of
+     * removed — matching the rectangular layout constraint. Fires
+     * On Circular Edge Hit once on the free→edge transition.
+     */
+    _applyCircularConstraint() {
+      const cc = this._circularConstraint;
+      if (!cc) return;
+
+      const inst = this.instance;
+      const dx   = inst.x - cc.cx;
+      const dy   = inst.y - cc.cy;
+      const dist = Math.hypot(dx, dy);
+
+      // Unit radial direction (center → cursor). At the exact center there is no
+      // defined direction; only a positive minRadius needs to push out, so pick
+      // +X arbitrarily — any direction is equally valid for reaching the ring.
+      let dirX, dirY;
+      if (dist > 1e-6) {
+        dirX = dx / dist;
+        dirY = dy / dist;
+      } else {
+        dirX = 1;
+        dirY = 0;
+      }
+
+      let edge = 0; // 0 none, 1 outer (max), -1 inner (min)
+      let clampedDist = dist;
+      if (dist > cc.maxRadius) {
+        clampedDist = cc.maxRadius;
+        edge = 1;
+      } else if (dist < cc.minRadius) {
+        clampedDist = cc.minRadius;
+        edge = -1;
+      }
+
+      if (edge !== 0) {
+        inst.x = cc.cx + dirX * clampedDist;
+        inst.y = cc.cy + dirY * clampedDist;
+
+        // Radial velocity component (positive = outward). Act only on motion
+        // heading further past the edge just hit (outward at the rim, inward at
+        // the hole) so orbital/tangential motion along the ring is preserved.
+        const vRadial  = this._velX * dirX + this._velY * dirY;
+        const intoEdge = (edge === 1 && vRadial > 0) || (edge === -1 && vRadial < 0);
+        if (intoEdge) {
+          if (this._bounceConstraints) {
+            this._velX -= 2 * vRadial * dirX;
+            this._velY -= 2 * vRadial * dirY;
+            this._bouncedThisTick = true;
+          } else {
+            this._velX -= vRadial * dirX;
+            this._velY -= vRadial * dirY;
+          }
+        }
+      }
+
+      // Edge-hit trigger: fire once on first contact, reset when free.
+      this._circularEdge = edge;
+      if (edge !== 0 && !this._atCircularEdge) {
+        this._atCircularEdge = true;
+        this._trigger("OnCircularEdgeHit");
+      } else if (edge === 0) {
+        this._atCircularEdge = false;
+      }
+
+      // Position is now final for the frame — fold this frame's angular travel
+      // around the center into the rotation accumulator.
+      this._accumulateRotation(cc);
+    }
+
+    /**
+     * Adds this frame's signed angular travel around the constraint center to
+     * _totalRotation, so spinning the cursor around the center accumulates a
+     * running total (in degrees) that grows past 360° on continuous turns.
+     *
+     * The per-frame step is the SHORTEST signed angle between the previous and
+     * current center→cursor angle, so crossing the 0°/360° seam never injects a
+     * bogus ±360 jump. Counting pauses (and re-seeds) when the cursor sits on
+     * the center — where the angle is undefined — and whenever the center moves
+     * to a new point (e.g. a leash following an object, or switching dials), so
+     * that relocation isn't mistaken for rotation. The accumulator itself is NOT
+     * cleared on a center change; call Reset Circular Rotation to zero it.
+     *
+     * @param {{cx:number, cy:number}} cc - the active circular constraint
+     */
+    _accumulateRotation(cc) {
+      const inst = this.instance;
+      const dx   = inst.x - cc.cx;
+      const dy   = inst.y - cc.cy;
+
+      // At/near the exact center the angle is unstable; pause counting and force
+      // a re-seed so moving back out doesn't count a spurious jump.
+      if (dx * dx + dy * dy < 0.25) { // within 0.5px of center
+        this._hasRotAngle = false;
+        return;
+      }
+
+      const cur = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      if (this._hasRotAngle &&
+          cc.cx === this._rotCenterX && cc.cy === this._rotCenterY) {
+        // Shortest signed step, normalized to (-180, 180].
+        let delta = cur - this._prevRotAngle;
+        delta -= 360 * Math.floor((delta + 180) / 360);
+        this._totalRotation += delta;
+      }
+
+      this._prevRotAngle = cur;
+      this._rotCenterX   = cc.cx;
+      this._rotCenterY   = cc.cy;
+      this._hasRotAngle  = true;
+    }
+
     _release() {
       getCursorRegistry().delete(this._pointerContract);
       super._release();
@@ -1017,6 +1247,9 @@ export default function (parentClass) {
           { name: "$AxisY",           value: this._axisY },
           { name: "$LastPressed",     value: this._lastInteractPressedId  || "—" },
           { name: "$LastReleased",    value: this._lastInteractReleasedId || "—" },
+          { name: "$CircularConstraint", value: this._circularConstraint ? "on" : "off" },
+          { name: "$Rotation",        value: Math.round(this._totalRotation) + "°" },
+          { name: "$CircularReturn",  value: this._circularReturnStrength > 0 ? this._circularReturnStrength : "off" },
         ]
       }];
     }
@@ -1058,6 +1291,10 @@ export default function (parentClass) {
       this._setPosWasCalledLastTick = false;
       // Resume input on load so it can't stay frozen from a mid-cutscene save.
       this._ignoringInput = false;
+      // Accumulated rotation is transient like velocity — start fresh and
+      // re-seed the angle next frame so the load doesn't count as a spin.
+      this._totalRotation = 0;
+      this._hasRotAngle   = false;
     }
   };
 }
