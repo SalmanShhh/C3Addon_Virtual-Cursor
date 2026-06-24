@@ -58,5 +58,10 @@
     "added": "- \"Set Circular Constraint to Object action\" , pins the circular constraint center to a picked object and tracks its position\n- \"Set Constraint Bounds to Object\" action  pins the rectangular constraint to a picked object, creating a zone of custom half-width × half-height that follows it automatically\n- \"ConstraintObjectUID\" expression returns the UID of whichever object-pinned constraint is active (circular first, then bounds), or -1 if neither tracks an object; use with System → Pick by UID to rotate dials, apply effects, etc.\n",
     "changed": "- ConstraintLeft / ConstraintTop / ConstraintRight / ConstraintBottom merged into ConstraintBound(\"left\"/\"top\"/\"right\"/\"bottom\")\n- ConstraintCenterX / ConstraintCenterY merged into ConstraintCenter(\"x\"/\"y\")\n- ConstraintMinRadius / ConstraintMaxRadius merged into ConstraintRadius(\"min\"/\"max\")\n- Set Circular Constraint (raw coords) now clears any active object tracking when called the two modes are mutually exclusive\n- Set Constraint Bounds (raw coords) now clears any active object tracking when called\n- Clear Circular Constraint now also clears the tracked object reference",
     "fixed": ""
+  },
+  "1.1.1.1": {
+    "added": "",
+    "changed": "",
+    "fixed": ""
   }
 }
