@@ -181,6 +181,23 @@ Event: On start of layout
   Action: Virtual Cursor -> Set Solid Collision true
 ```
 
+### Rectangular constraint around an object
+
+**Set Constraint Bounds to Object** confines the cursor to a rectangle centered on a specific object, tracking its position every tick automatically. The Half Width and Half Height parameters set how far the cursor may stray from the object's center in each direction — so `(SafePanel, 120, 80)` creates a 240×160 zone that follows SafePanel wherever it moves.
+
+Use **ConstraintObjectUID** to pick the tracked object back in events (e.g. to highlight the active zone or apply effects to the correct panel):
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Constraint Bounds to Object (SafePanel, 120, 80)
+
+Event: Virtual Cursor -> On Layout Edge Hit
+  System: Pick SafePanel by UID Virtual Cursor.ConstraintObjectUID
+    Action: SafePanel -> Flash
+```
+
+To clear the object-tracked bounds and restore full-layout clamping, call **Set Constraint Bounds (0, 0, 0, 0)** or **Set Constrain To Layout false**.
+
 ### Circular constraints
 
 Beyond the rectangular clamp, **Set Circular Constraint** (center X, Y, min radius, max radius) confines the cursor to a ring band around a center point. This drives two families of mini-game:
@@ -188,7 +205,18 @@ Beyond the rectangular clamp, **Set Circular Constraint** (center X, Y, min radi
 - **Spin** (Min = Max): the cursor is pinned to a ring and can only orbit the center — dials, knobs, steering wheels, reel cranks. Read **ConstraintAngle** for the dial angle.
 - **Pull** (Min = 0): the cursor roams a disc and snaps back to the rim past Max — slingshots, analog sticks, charge meters. Read **ConstraintPull** (0–1) for power and **ConstraintAngle** for aim.
 
-Update the center every tick (e.g. with an object's X, Y) to make the constraint follow a moving anchor, and **On Circular Edge Hit** fires when the cursor reaches the inner or outer edge.
+**Set Circular Constraint to Object** is the preferred alternative when the center should follow a specific object. It takes the object directly instead of raw X, Y coordinates, and tracks its position automatically every tick — no need to update the center manually. Use **ConstraintObjectUID** to pick the same object back in events (e.g. to rotate the dial to ConstraintAngle, or to apply a visual effect to the correct safe):
+
+```text
+Event: On start of layout
+  Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 100, 100)
+
+Every tick:
+  System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+    Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
+```
+
+**On Circular Edge Hit** fires when the cursor reaches the inner or outer edge.
 
 While a circular constraint is active the cursor's rotation around the center is tracked automatically: **ConstraintRotation** sums the signed degrees turned (unbounded — 360 per full turn, negative for the other direction) and **ConstraintRevolutions** reports the same as full turns. Wrap-around past 0°/360° is handled, so this is the reliable way to build spin-to-unlock dials and combination locks without tracking the previous angle yourself. **Reset Circular Rotation** zeroes the counter — call it when a challenge starts or between combination-lock stages.
 
@@ -196,7 +224,7 @@ While a circular constraint is active the cursor's rotation around the center is
 
 ```text
 Event: On start of layout
-  Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+  Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 100, 100)
 
 Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 3
   Action: Safe -> unlock
@@ -286,12 +314,14 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 |---|---|
 | Set Enabled | Enables or disables the cursor behavior. |
 | Set Constrain To Layout | Enables or disables layout boundary clamping. |
-| Set Constraint Bounds | Sets a custom clamp box for the cursor. |
+| Set Constraint Bounds | Sets a custom clamp box for the cursor (raw coordinates). |
+| Set Constraint Bounds to Object | Confines the cursor to a rectangle centered on a picked object, tracking its position automatically. Half Width/Height set how far the cursor may move from the object's center. |
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
 | Set Ignoring Input | Freezes all movement input — arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
 | Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
-| Set Circular Constraint | Confines the cursor to a ring band around a center point — Min = Max locks it to a ring to spin (dials, wheels, cranks); Min = 0 makes a pull disc (slingshot, joystick). |
+| Set Circular Constraint | Confines the cursor to a ring band around a center point (raw X, Y). Min = Max locks it to a ring to spin (dials, wheels, cranks); Min = 0 makes a pull disc (slingshot, joystick). |
+| Set Circular Constraint to Object | Same as above but takes an object instead of X, Y — the center tracks the object's position automatically every tick. |
 | Clear Circular Constraint | Removes the circular constraint so the cursor moves freely again. |
 | Reset Circular Rotation | Zeroes the accumulated rotation counter (ConstraintRotation / ConstraintRevolutions). |
 | Set Circular Return | Springs the cursor back to its rest position when input stops — the center/origin for a disc (analog stick), or a home angle for a ring (self-centering wheel). Strength 0 disables. |
@@ -354,12 +384,13 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | CountHomingTargets | Number | Number of currently registered targets. |
 | SolidUID | Number | UID of the most recent solid hit. |
 | CountSolids | Number | Number of registered solid blockers. |
-| ConstraintLeft / Top / Right / Bottom | Number | The current rectangular clamp box values. |
-| ConstraintCenterX / CenterY | Number | Center position of the active circular constraint. |
-| ConstraintMinRadius / MaxRadius | Number | Inner and outer radius of the active circular constraint. |
+| ConstraintBound("left"/"top"/"right"/"bottom") | Number | One edge of the active rectangular constraint region. Returns 0 / layout size when no custom bounds are set. |
+| ConstraintCenter("x"/"y") | Number | X or Y position of the circular constraint's center. Returns 0 when none active. |
+| ConstraintRadius("min"/"max") | Number | Inner or outer radius of the active circular constraint. Returns 0 when none active. |
 | ConstraintAngle | Number | Angle (degrees, 0–360) from the circular constraint's center to the cursor — the dial/spin angle. |
 | ConstraintDistance | Number | Distance in pixels from the circular constraint's center to the cursor — the pull/draw length. |
 | ConstraintPull | Number | How far the cursor is drawn within the band, 0–1 (0 = Min radius, 1 = Max radius). |
+| ConstraintObjectUID | Number | UID of the object being tracked by whichever object-pinned constraint is active (circular checked first, then rectangular bounds), or -1 if neither is tracking. Use with System → Pick by UID to act on that object. |
 | ConstraintRotation | Number | Total accumulated rotation in degrees around the center while a circular constraint is active (signed, unbounded — 360 = one full turn). |
 | ConstraintRevolutions | Number | Accumulated rotation as full turns (ConstraintRotation / 360), signed and fractional. |
 | BounceMode | String | Active Bounce type token: "none", "solids", "constraints", or "both". |
@@ -969,15 +1000,16 @@ Event: On load game
     ```
 
 48. **Spin-to-unlock dial**  
-    **Scenario:** Lock the cursor to a dial and unlock once the player has spun it three full turns in either direction. The behavior accumulates the rotation for you across the 0°/360° seam.  
+    **Scenario:** Lock the cursor to a dial and unlock once the player has spun it three full turns in either direction. The behavior accumulates the rotation for you across the 0°/360° seam. Use `ConstraintObjectUID` to pick the Dial back and rotate its sprite to match.  
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 100, 100)
       Action: Virtual Cursor -> Reset Circular Rotation
 
     Event: Every tick
-      Action: Dial -> Set angle Virtual Cursor.ConstraintAngle
+      System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+        Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
 
     Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 3
         Sub-event: System -> Trigger once
@@ -986,13 +1018,17 @@ Event: On load game
     ```
 
 49. **Directional combination safe**  
-    **Scenario:** A multi-stage safe lock: turn 2 full turns one way, then 1.5 turns back the other way. Reset the counter between stages and use the SIGN of the rotation to enforce direction.  
+    **Scenario:** A multi-stage safe lock: turn 2 full turns one way, then 1.5 turns back the other way. Reset the counter between stages and use the SIGN of the rotation to enforce direction. `ConstraintObjectUID` lets you pick the correct Dial in every stage without any extra variables.  
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 100, 100)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 100, 100)
       Action: Virtual Cursor -> Reset Circular Rotation
       Action: System -> Set Stage to 0
+
+    Event: Every tick
+      System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+        Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
 
     Event: System -> Stage = 0
         Condition: System -> Compare: Virtual Cursor.ConstraintRevolutions >= 2     // clockwise

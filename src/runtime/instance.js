@@ -158,9 +158,12 @@ export default function (parentClass) {
       // ── Layout constraint ─────────────────────────────────────────────────
       // When enabled, the cursor is clamped inside _constraintBounds each tick.
       // _constraintBounds=null means use the full layout dimensions.
-      this._constrainToLayout  = true;
-      this._atLayoutEdge       = false; // Edge-hit trigger fires only on transition false→true
-      this._constraintBounds   = null;  // null | { left, top, right, bottom }
+      this._constrainToLayout     = true;
+      this._atLayoutEdge          = false; // Edge-hit trigger fires only on transition false→true
+      this._constraintBounds      = null;  // null | { left, top, right, bottom }
+      this._constraintBoundsUID   = -1;    // UID of tracked anchor object, or -1 for raw coords
+      this._constraintBoundsHalfW = 0;     // half-extents stored so tracking never drifts
+      this._constraintBoundsHalfH = 0;
 
       // ── Circular constraint ───────────────────────────────────────────────
       // Optional: confines the cursor to a ring band (annulus) around a center
@@ -172,9 +175,10 @@ export default function (parentClass) {
       //     the rim past maxRadius (radial pull, slingshot draw, analog stick).
       // null = off. Set via Set Circular Constraint; applied AFTER the
       // rectangular layout clamp each tick so the circle wins when both are on.
-      this._circularConstraint = null;  // null | { cx, cy, minRadius, maxRadius }
-      this._atCircularEdge     = false; // true while clamped to an edge (drives the trigger)
-      this._circularEdge       = 0;     // edge last hit: 0 none, 1 outer (max), -1 inner (min)
+      this._circularConstraint    = null;  // null | { cx, cy, minRadius, maxRadius }
+      this._circularConstraintUID = -1;    // UID of tracked anchor object, or -1 for raw coords
+      this._atCircularEdge        = false; // true while clamped to an edge (drives the trigger)
+      this._circularEdge          = 0;     // edge last hit: 0 none, 1 outer (max), -1 inner (min)
 
       // ── Accumulated rotation ──────────────────────────────────────────────
       // While a circular constraint is active, the cursor's angle around the
@@ -984,6 +988,24 @@ export default function (parentClass) {
     _applyLayoutConstraint() {
       if (!this._constrainToLayout) return;
 
+      // If the bounds are pinned to an object, pull its center each tick and
+      // rebuild the rect from the stored half-extents so there's no drift.
+      if (this._constraintBoundsUID !== -1) {
+        const anchor = this._getRuntimeInstanceByUid(this._constraintBoundsUID);
+        if (anchor) {
+          const hw = this._constraintBoundsHalfW;
+          const hh = this._constraintBoundsHalfH;
+          this._constraintBounds = {
+            left:   anchor.x - hw,
+            top:    anchor.y - hh,
+            right:  anchor.x + hw,
+            bottom: anchor.y + hh,
+          };
+        } else {
+          this._constraintBoundsUID = -1; // anchor destroyed; keep last known bounds
+        }
+      }
+
       const inst   = this.instance;
       const bounds = this._constraintBounds ?? {
         left:   0,
@@ -1111,6 +1133,17 @@ export default function (parentClass) {
     _applyCircularConstraint() {
       const cc = this._circularConstraint;
       if (!cc) return;
+
+      // If the constraint is pinned to an object, pull the center from it each tick.
+      if (this._circularConstraintUID !== -1) {
+        const anchor = this._getRuntimeInstanceByUid(this._circularConstraintUID);
+        if (anchor) {
+          cc.cx = anchor.x;
+          cc.cy = anchor.y;
+        } else {
+          this._circularConstraintUID = -1; // anchor destroyed; keep last known center
+        }
+      }
 
       const inst = this.instance;
       const dx   = inst.x - cc.cx;

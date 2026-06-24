@@ -45,5 +45,6 @@ export default function (cx, cy, minRadius, maxRadius) {
   let min = Math.max(0, minRadius);
   let max = Math.max(0, maxRadius);
   if (min > max) max = min;
+  this._circularConstraintUID = -1; // switching to raw coords clears any object tracking
   this._circularConstraint = { cx, cy, minRadius: min, maxRadius: max };
 }

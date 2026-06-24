@@ -37,6 +37,7 @@ export const config = {
 export const expose = true;
 
 export default function (left, top, right, bottom) {
+  this._constraintBoundsUID = -1; // switching to raw coords clears any object tracking
   if (left === 0 && top === 0 && right === 0 && bottom === 0) {
     this._constraintBounds = null; // reset to full layout bounds
   } else {
