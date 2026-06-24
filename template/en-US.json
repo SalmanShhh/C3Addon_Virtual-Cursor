@@ -431,6 +431,25 @@
               }
             }
           },
+          "SetCircularConstraintToObject": {
+            "list-name": "Set Circular Constraint to Object",
+            "display-text": "{my}: Constrain to circle around {0} radius {1} – {2}",
+            "description": "Confines the cursor to a ring band around the picked object, tracking its position automatically every tick. Set Min = Max to lock the cursor to a ring (dials, combination safes); set Min = 0 to let it roam a disc and snap back at Max (slingshots, joysticks). Read ConstraintObjectUID to pick the same object in events (e.g. rotate the dial, apply effects).",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "The object whose position becomes the circle's center. The first picked instance is used."
+              },
+              "minRadius": {
+                "name": "Min Radius",
+                "desc": "Inner radius in pixels. 0 = a full disc; equal to Max = a locked ring."
+              },
+              "maxRadius": {
+                "name": "Max Radius",
+                "desc": "Outer radius in pixels — the cursor can never get further than this from the center."
+              }
+            }
+          },
           "SetCircularReturn": {
             "list-name": "Set Circular Return",
             "display-text": "{my}: Set circular return strength {0} home angle {1}",
@@ -466,6 +485,25 @@
               "bottom": {
                 "name": "Bottom",
                 "desc": "Bottom boundary in pixels"
+              }
+            }
+          },
+          "SetConstraintBoundsToObject": {
+            "list-name": "Set Constraint Bounds to Object",
+            "display-text": "{my}: Constrain to rect around {0} ±{1}w ±{2}h",
+            "description": "Confines the cursor to a rectangle centered on the picked object, tracking its position automatically every tick. Half Width and Half Height set how far the cursor can move from the object's center in each direction — e.g. 100, 75 creates a 200×150 rectangle. Read ConstraintBoundsObjectUID to pick the same object in events (e.g. apply effects to the correct panel).",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "The object whose position becomes the rectangle's center. The first picked instance is used."
+              },
+              "halfWidth": {
+                "name": "Half Width",
+                "desc": "Half the rectangle's width in pixels (cursor stays within this distance left and right of the object)."
+              },
+              "halfHeight": {
+                "name": "Half Height",
+                "desc": "Half the rectangle's height in pixels (cursor stays within this distance above and below the object)."
               }
             }
           },
@@ -775,39 +813,34 @@
             "description": "Angle in degrees (0–360) from the circular constraint's center to the cursor. The dial/spin angle. Returns 0 when no circular constraint is active.",
             "params": {}
           },
-          "ConstraintBottom": {
-            "translated-name": "ConstraintBottom",
-            "description": "Returns the bottom edge of the active constraint region.",
-            "params": {}
+          "ConstraintBound": {
+            "translated-name": "ConstraintBound",
+            "description": "Returns one edge of the active rectangular constraint region. Pass \"left\", \"top\", \"right\", or \"bottom\". Left and Top return 0, Right and Bottom return the layout size, when no custom bounds are set.",
+            "params": {
+              "side": {
+                "name": "Side",
+                "desc": "Which edge to read: \"left\", \"top\", \"right\", or \"bottom\"."
+              }
+            }
           },
-          "ConstraintCenterX": {
-            "translated-name": "ConstraintCenterX",
-            "description": "X position of the circular constraint's center. Returns 0 when no circular constraint is active.",
-            "params": {}
-          },
-          "ConstraintCenterY": {
-            "translated-name": "ConstraintCenterY",
-            "description": "Y position of the circular constraint's center. Returns 0 when no circular constraint is active.",
-            "params": {}
+          "ConstraintCenter": {
+            "translated-name": "ConstraintCenter",
+            "description": "Returns the X or Y position of the circular constraint's center. Pass \"x\" or \"y\". Returns 0 when no circular constraint is active.",
+            "params": {
+              "axis": {
+                "name": "Axis",
+                "desc": "Which coordinate to read: \"x\" or \"y\"."
+              }
+            }
           },
           "ConstraintDistance": {
             "translated-name": "ConstraintDistance",
             "description": "Current distance in pixels from the circular constraint's center to the cursor. The pull / draw length. Returns 0 when no circular constraint is active.",
             "params": {}
           },
-          "ConstraintLeft": {
-            "translated-name": "ConstraintLeft",
-            "description": "Returns the left edge of the active constraint region.",
-            "params": {}
-          },
-          "ConstraintMaxRadius": {
-            "translated-name": "ConstraintMaxRadius",
-            "description": "Outer radius of the active circular constraint, in pixels — handy for sizing a boundary ring sprite. Returns 0 when no circular constraint is active.",
-            "params": {}
-          },
-          "ConstraintMinRadius": {
-            "translated-name": "ConstraintMinRadius",
-            "description": "Inner radius of the active circular constraint, in pixels. Returns 0 when no circular constraint is active.",
+          "ConstraintObjectUID": {
+            "translated-name": "ConstraintObjectUID",
+            "description": "Returns the UID of the object being tracked by whichever object-pinned constraint is active — circular (Set Circular Constraint to Object) is checked first, then rectangular bounds (Set Constraint Bounds to Object). Returns -1 if neither is tracking an object. ",
             "params": {}
           },
           "ConstraintPull": {
@@ -815,24 +848,24 @@
             "description": "How far the cursor is drawn within the constraint band, normalized 0–1 (0 = at Min radius, 1 = at Max radius). Ideal for slingshot/joystick power. Returns 0 when inactive or Min equals Max.",
             "params": {}
           },
+          "ConstraintRadius": {
+            "translated-name": "ConstraintRadius",
+            "description": "Returns the inner or outer radius of the active circular constraint. Pass \"min\" or \"max\". Returns 0 when no circular constraint is active.",
+            "params": {
+              "type": {
+                "name": "Type",
+                "desc": "Which radius to read: \"min\" (inner) or \"max\" (outer)."
+              }
+            }
+          },
           "ConstraintRevolutions": {
             "translated-name": "ConstraintRevolutions",
             "description": "Accumulated rotation expressed as full turns (ConstraintRotation / 360) — signed and fractional, e.g. 1.5 = one and a half turns one way, -3 = three turns the other. Ideal for 'spin N times to unlock' checks. Zero it with Reset Circular Rotation.",
             "params": {}
           },
-          "ConstraintRight": {
-            "translated-name": "ConstraintRight",
-            "description": "Returns the right edge of the active constraint region.",
-            "params": {}
-          },
           "ConstraintRotation": {
             "translated-name": "ConstraintRotation",
             "description": "Total accumulated rotation in degrees while a circular constraint is active — signed (one spin direction adds, the other subtracts) and unbounded, so a full turn reads 360, two turns 720. Use abs() if direction doesn't matter. Zero it with Reset Circular Rotation.",
-            "params": {}
-          },
-          "ConstraintTop": {
-            "translated-name": "ConstraintTop",
-            "description": "Returns the top edge of the active constraint region.",
             "params": {}
           }
         }

@@ -9,7 +9,6 @@ export const config = {
       name: "Axis",
       desc: 'Which coordinate to read: "x" or "y".',
       type: "string",
-      initialValue: '"x"',
     },
   ],
 };

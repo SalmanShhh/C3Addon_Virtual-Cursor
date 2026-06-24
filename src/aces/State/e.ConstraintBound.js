@@ -10,7 +10,6 @@ export const config = {
       name: "Side",
       desc: 'Which edge to read: "left", "top", "right", or "bottom".',
       type: "string",
-      initialValue: '"left"',
     },
   ],
 };

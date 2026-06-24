@@ -9,7 +9,6 @@ export const config = {
       name: "Type",
       desc: 'Which radius to read: "min" (inner) or "max" (outer).',
       type: "string",
-      initialValue: '"max"',
     },
   ],
 };

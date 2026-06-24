@@ -1,16 +1,11 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.1.0.0
+### Version 1.1.2.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.1.0.0.c3addon/salmanshh_virtual_cursor-1.1.0.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.1.2.0.c3addon/salmanshh_virtual_cursor-1.1.2.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
-
-#### What's New in 1.1.0.0
-- **Added:** - Orbital Control update!
-
-<sub>[View full changelog](#changelog)</sub>
 
 ---
 <b><u>Author:</u></b> SalmanShh <br>
@@ -92,8 +87,10 @@ npm run dev
 | Reset Circular Rotation | Zeroes the accumulated rotation (ConstraintRotation / ConstraintRevolutions). Call it when a spin challenge starts, or between the stages of a combination lock. |  |
 | Set Bounce | Chooses which surfaces the cursor reflects off (a lossless bounce, like the Bullet behavior) instead of stopping or sliding. Works on momentum (e.g. Set Velocity); held axis input into a wall overrides it. | Mode             *(combo)* <br> |
 | Set Circular Constraint | Confines the cursor to a ring band around a center point. Set Min = Max to lock it to a ring it can only spin around (dials, wheels); set Min = 0 to let it roam a disc and snap back at Max (slingshot pull, joystick). Call every tick with an object's X,Y to make the center follow it. | Center X             *(number)* <br>Center Y             *(number)* <br>Min Radius             *(number)* <br>Max Radius             *(number)* <br> |
+| Set Circular Constraint to Object | Confines the cursor to a ring band around the picked object, tracking its position automatically every tick. Set Min = Max to lock the cursor to a ring (dials, combination safes); set Min = 0 to let it roam a disc and snap back at Max (slingshots, joysticks). Read ConstraintObjectUID to pick the same object in events (e.g. rotate the dial, apply effects). | Object             *(object)* <br>Min Radius             *(number)* <br>Max Radius             *(number)* <br> |
 | Set Circular Return | Makes the cursor spring back to its rest position on the circular constraint when the player stops steering or dragging it. For a pull disc (Min radius 0) it snaps back to the center/origin (like an analog stick); for a ring or dial it returns to the given home angle (a self-centering steering wheel). Strength 0 disables it; higher is snappier. Requires an active circular constraint. | Strength             *(number)* <br>Home Angle             *(number)* <br> |
 | Set Constraint Bounds | Sets a custom constraint rectangle. Pass all zeros to reset to full layout bounds. | Left             *(number)* <br>Top             *(number)* <br>Right             *(number)* <br>Bottom             *(number)* <br> |
+| Set Constraint Bounds to Object | Confines the cursor to a rectangle centered on the picked object, tracking its position automatically every tick. Half Width and Half Height set how far the cursor can move from the object's center in each direction — e.g. 100, 75 creates a 200×150 rectangle. Read ConstraintBoundsObjectUID to pick the same object in events (e.g. apply effects to the correct panel). | Object             *(object)* <br>Half Width             *(number)* <br>Half Height             *(number)* <br> |
 | Set Constrain To Layout | Clamps cursor inside layout bounds and fires On Layout Edge Hit. | Enabled             *(boolean)* <br> |
 | Set default controls | Enable or disable the built-in arrow key controls. When disabled, use the Simulate Control action to drive movement from the event sheet. | Enabled             *(boolean)* <br> |
 | Set Direction Mode | Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis per tick; 8 Directions allows full free movement. | Mode             *(combo)* <br> |
@@ -148,22 +145,33 @@ npm run dev
 | SolidUID | Returns the UID of the last solid hit this tick, or -1. | number |  | 
 | BounceMode | Returns which Bounce type is active as a token: "none", "solids", "constraints", or "both" (solids and constraints). | string |  | 
 | ConstraintAngle | Angle in degrees (0–360) from the circular constraint's center to the cursor. The dial/spin angle. Returns 0 when no circular constraint is active. | number |  | 
-| ConstraintBottom | Returns the bottom edge of the active constraint region. | number |  | 
-| ConstraintCenterX | X position of the circular constraint's center. Returns 0 when no circular constraint is active. | number |  | 
-| ConstraintCenterY | Y position of the circular constraint's center. Returns 0 when no circular constraint is active. | number |  | 
+| ConstraintBound | Returns one edge of the active rectangular constraint region. Pass "left", "top", "right", or "bottom". Left and Top return 0, Right and Bottom return the layout size, when no custom bounds are set. | number | Side *(string)* <br> | 
+| ConstraintCenter | Returns the X or Y position of the circular constraint's center. Pass "x" or "y". Returns 0 when no circular constraint is active. | number | Axis *(string)* <br> | 
 | ConstraintDistance | Current distance in pixels from the circular constraint's center to the cursor. The pull / draw length. Returns 0 when no circular constraint is active. | number |  | 
-| ConstraintLeft | Returns the left edge of the active constraint region. | number |  | 
-| ConstraintMaxRadius | Outer radius of the active circular constraint, in pixels — handy for sizing a boundary ring sprite. Returns 0 when no circular constraint is active. | number |  | 
-| ConstraintMinRadius | Inner radius of the active circular constraint, in pixels. Returns 0 when no circular constraint is active. | number |  | 
+| ConstraintObjectUID | Returns the UID of the object being tracked by whichever object-pinned constraint is active — circular (Set Circular Constraint to Object) is checked first, then rectangular bounds (Set Constraint Bounds to Object). Returns -1 if neither is tracking an object.  | number |  | 
 | ConstraintPull | How far the cursor is drawn within the constraint band, normalized 0–1 (0 = at Min radius, 1 = at Max radius). Ideal for slingshot/joystick power. Returns 0 when inactive or Min equals Max. | number |  | 
+| ConstraintRadius | Returns the inner or outer radius of the active circular constraint. Pass "min" or "max". Returns 0 when no circular constraint is active. | number | Type *(string)* <br> | 
 | ConstraintRevolutions | Accumulated rotation expressed as full turns (ConstraintRotation / 360) — signed and fractional, e.g. 1.5 = one and a half turns one way, -3 = three turns the other. Ideal for 'spin N times to unlock' checks. Zero it with Reset Circular Rotation. | number |  | 
-| ConstraintRight | Returns the right edge of the active constraint region. | number |  | 
 | ConstraintRotation | Total accumulated rotation in degrees while a circular constraint is active — signed (one spin direction adds, the other subtracts) and unbounded, so a full turn reads 360, two turns 720. Use abs() if direction doesn't matter. Zero it with Reset Circular Rotation. | number |  | 
-| ConstraintTop | Returns the top edge of the active constraint region. | number |  | 
 
 
 ---
 ## Changelog
+
+**1.1.2.0**
+
+**1.1.1.1**
+
+**1.1.1.0**
+- **Added:** - "Set Circular Constraint to Object action" , pins the circular constraint center to a picked object and tracks its position
+- **Added:** - "Set Constraint Bounds to Object" action  pins the rectangular constraint to a picked object, creating a zone of custom half-width × half-height that follows it automatically
+- **Added:** - "ConstraintObjectUID" expression returns the UID of whichever object-pinned constraint is active (circular first, then bounds), or -1 if neither tracks an object; use with System → Pick by UID to rotate dials, apply effects, etc.
+- **Changed:** - ConstraintLeft / ConstraintTop / ConstraintRight / ConstraintBottom merged into ConstraintBound("left"/"top"/"right"/"bottom")
+- **Changed:** - ConstraintCenterX / ConstraintCenterY merged into ConstraintCenter("x"/"y")
+- **Changed:** - ConstraintMinRadius / ConstraintMaxRadius merged into ConstraintRadius("min"/"max")
+- **Changed:** - Set Circular Constraint (raw coords) now clears any active object tracking when called the two modes are mutually exclusive
+- **Changed:** - Set Constraint Bounds (raw coords) now clears any active object tracking when called
+- **Changed:** - Clear Circular Constraint now also clears the tracked object reference
 
 **1.1.0.0**
 - **Added:** - Orbital Control update!
