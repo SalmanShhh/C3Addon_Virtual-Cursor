@@ -185,14 +185,14 @@ Event: On start of layout
 
 **Set Constraint Bounds to Object** confines the cursor to a rectangle centered on a specific object, tracking its position every tick automatically. The Half Width and Half Height parameters set how far the cursor may stray from the object's center in each direction — so `(SafePanel, 120, 80)` creates a 240×160 zone that follows SafePanel wherever it moves.
 
-Use **ConstraintObjectUID** to pick the tracked object back in events (e.g. to highlight the active zone or apply effects to the correct panel):
+Use **ConstraintBoundsObjectUID** to pick the tracked object back in events (e.g. to highlight the active zone or apply effects to the correct panel):
 
 ```text
 Event: On start of layout
   Action: Virtual Cursor -> Set Constraint Bounds to Object (SafePanel, 120, 80)
 
 Event: Virtual Cursor -> On Layout Edge Hit
-  System: Pick SafePanel by UID Virtual Cursor.ConstraintObjectUID
+  System: Pick SafePanel by UID Virtual Cursor.ConstraintBoundsObjectUID
     Action: SafePanel -> Flash
 ```
 
@@ -205,14 +205,14 @@ Beyond the rectangular clamp, **Set Circular Constraint** (center X, Y, min radi
 - **Spin** (Min = Max): the cursor is pinned to a ring and can only orbit the center — dials, knobs, steering wheels, reel cranks. Read **ConstraintAngle** for the dial angle.
 - **Pull** (Min = 0): the cursor roams a disc and snaps back to the rim past Max — slingshots, analog sticks, charge meters. Read **ConstraintPull** (0–1) for power and **ConstraintAngle** for aim.
 
-**Set Circular Constraint to Object** is the preferred alternative when the center should follow a specific object. It takes the object directly instead of raw X, Y coordinates, and tracks its position automatically every tick — no need to update the center manually. Use **ConstraintObjectUID** to pick the same object back in events (e.g. to rotate the dial to ConstraintAngle, or to apply a visual effect to the correct safe):
+**Set Circular Constraint to Object** is the preferred alternative when the center should follow a specific object. It takes the object directly instead of raw X, Y coordinates, and tracks its position automatically every tick — no need to update the center manually. Use **ConstraintCircleObjectUID** to pick the same object back in events (e.g. to rotate the dial to ConstraintAngle, or to apply a visual effect to the correct safe):
 
 ```text
 Event: On start of layout
   Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 100, 100)
 
 Every tick:
-  System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+  System: Pick Dial by UID Virtual Cursor.ConstraintCircleObjectUID
     Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
 ```
 
@@ -390,7 +390,9 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | ConstraintAngle | Number | Angle (degrees, 0–360) from the circular constraint's center to the cursor — the dial/spin angle. |
 | ConstraintDistance | Number | Distance in pixels from the circular constraint's center to the cursor — the pull/draw length. |
 | ConstraintPull | Number | How far the cursor is drawn within the band, 0–1 (0 = Min radius, 1 = Max radius). |
-| ConstraintObjectUID | Number | UID of the object being tracked by whichever object-pinned constraint is active (circular checked first, then rectangular bounds), or -1 if neither is tracking. Use with System → Pick by UID to act on that object. |
+| ConstraintCircleObjectUID | Number | UID of the object tracked as the circular constraint center (Set Circular Constraint to Object), or -1. Use with System → Pick by UID to rotate the dial or apply effects to the correct safe. |
+| ConstraintBoundsObjectUID | Number | UID of the object tracked as the rectangular constraint center (Set Constraint Bounds to Object), or -1. Use with System → Pick by UID to highlight the active zone or apply effects to the correct panel. |
+| ConstraintObjectUID | Number | Shorthand: returns ConstraintCircleObjectUID if a circular object constraint is active, otherwise ConstraintBoundsObjectUID, otherwise -1. Use when only one type of object constraint is active at a time. When both are active, use the specific expressions directly. |
 | ConstraintRotation | Number | Total accumulated rotation in degrees around the center while a circular constraint is active (signed, unbounded — 360 = one full turn). |
 | ConstraintRevolutions | Number | Accumulated rotation as full turns (ConstraintRotation / 360), signed and fractional. |
 | BounceMode | String | Active Bounce type token: "none", "solids", "constraints", or "both". |
@@ -897,10 +899,11 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Dial.X, Dial.Y, 90, 90)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Dial, 90, 90)
 
     Event: Every tick
-      Action: Dial -> Set angle Virtual Cursor.ConstraintAngle
+      System: Pick Dial by UID Virtual Cursor.ConstraintCircleObjectUID
+        Action: Dial -> Set angle Virtual Cursor.ConstraintAngle
     ```
 
 41. **Slingshot / bow launcher**  
@@ -908,7 +911,7 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Anchor.X, Anchor.Y, 0, 140)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Anchor, 0, 140)
 
     Event: Virtual Cursor -> On Interact Released "fire"
       Action: System -> Create Projectile at (Anchor.X, Anchor.Y)
@@ -921,7 +924,7 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (StickBase.X, StickBase.Y, 0, 80)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (StickBase, 0, 80)
       Action: Virtual Cursor -> Set Circular Return (0.6, 0)        // snaps back to the origin on release
 
     Event: Touch -> Is touching StickArea
@@ -939,7 +942,7 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On menu open
-      Action: Virtual Cursor -> Set Circular Constraint (MenuCenter.X, MenuCenter.Y, 70, 70)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (MenuCenter, 70, 70)
 
     Event: Every tick
       Action: System -> Set HighlightedOption to int(Virtual Cursor.ConstraintAngle / 60)
@@ -953,20 +956,21 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Wheel.X, Wheel.Y, 110, 110)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Wheel, 110, 110)
       Action: Virtual Cursor -> Set Circular Return (0.4, 270)      // 270° = 12 o'clock = straight ahead
 
     Event: Every tick
-      Action: Wheel -> Set angle Virtual Cursor.ConstraintAngle
+      System: Pick Wheel by UID Virtual Cursor.ConstraintCircleObjectUID
+        Action: Wheel -> Set angle Virtual Cursor.ConstraintAngle
       Action: System -> Set SteerInput to cos(Virtual Cursor.ConstraintAngle)   // -1 (left) .. 1 (right)
     ```
 
 45. **Leash that follows a moving anchor**  
-    **Scenario:** Keep the cursor inside a ring band around a moving companion — never closer than 40px, never further than 120px — by updating the center every tick so the tether drags along.  
+    **Scenario:** Keep the cursor inside a ring band around a moving companion — never closer than 40px, never further than 120px. Set it once and the center tracks the companion automatically.  
     **Event sheet:**
     ```text
-    Event: Every tick
-      Action: Virtual Cursor -> Set Circular Constraint (Companion.X, Companion.Y, 40, 120)
+    Event: On start of layout
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Companion, 40, 120)
     ```
 
 46. **Fishing reel crank**  
@@ -974,7 +978,7 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Reel.X, Reel.Y, 60, 60)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Reel, 60, 60)
       Action: Virtual Cursor -> Reset Circular Rotation
 
     Event: Every tick
@@ -989,7 +993,7 @@ Event: On load game
     **Event sheet:**
     ```text
     Event: On start of layout
-      Action: Virtual Cursor -> Set Circular Constraint (Bow.X, Bow.Y, 0, 160)
+      Action: Virtual Cursor -> Set Circular Constraint to Object (Bow, 0, 160)
 
     Event: Every tick
       Action: PowerBar -> Set width (Virtual Cursor.ConstraintPull * 200)
@@ -1000,7 +1004,7 @@ Event: On load game
     ```
 
 48. **Spin-to-unlock dial**  
-    **Scenario:** Lock the cursor to a dial and unlock once the player has spun it three full turns in either direction. The behavior accumulates the rotation for you across the 0°/360° seam. Use `ConstraintObjectUID` to pick the Dial back and rotate its sprite to match.  
+    **Scenario:** Lock the cursor to a dial and unlock once the player has spun it three full turns in either direction. The behavior accumulates the rotation for you across the 0°/360° seam. Use `ConstraintCircleObjectUID` to pick the Dial back and rotate its sprite to match.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -1008,7 +1012,7 @@ Event: On load game
       Action: Virtual Cursor -> Reset Circular Rotation
 
     Event: Every tick
-      System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+      System: Pick Dial by UID Virtual Cursor.ConstraintCircleObjectUID
         Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
 
     Event: System -> Compare: abs(Virtual Cursor.ConstraintRevolutions) >= 3
@@ -1018,7 +1022,7 @@ Event: On load game
     ```
 
 49. **Directional combination safe**  
-    **Scenario:** A multi-stage safe lock: turn 2 full turns one way, then 1.5 turns back the other way. Reset the counter between stages and use the SIGN of the rotation to enforce direction. `ConstraintObjectUID` lets you pick the correct Dial in every stage without any extra variables.  
+    **Scenario:** A multi-stage safe lock: turn 2 full turns one way, then 1.5 turns back the other way. Reset the counter between stages and use the SIGN of the rotation to enforce direction. `ConstraintCircleObjectUID` lets you pick the correct Dial in every stage without any extra variables.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -1027,7 +1031,7 @@ Event: On load game
       Action: System -> Set Stage to 0
 
     Event: Every tick
-      System: Pick Dial by UID Virtual Cursor.ConstraintObjectUID
+      System: Pick Dial by UID Virtual Cursor.ConstraintCircleObjectUID
         Action: Dial -> Set angle to Virtual Cursor.ConstraintAngle
 
     Event: System -> Stage = 0

@@ -1,9 +1,6 @@
 export const config = {
   returnType: "number",
-  description:
-    "Returns the UID of the object being tracked by whichever object-pinned constraint is active — " +
-    "circular (Set Circular Constraint to Object) is checked first, then rectangular bounds (Set Constraint Bounds to Object). " +
-    "Returns -1 if neither is tracking an object. ",
+  description: "Shorthand: returns ConstraintCircleObjectUID if set, else ConstraintBoundsObjectUID, else -1. Use when only one object constraint is active at a time.",
   params: [],
 };
 

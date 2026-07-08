@@ -1,11 +1,20 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.1.2.0
+### Version 1.2.0.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.1.2.0.c3addon/salmanshh_virtual_cursor-1.1.2.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.2.0.0.c3addon/salmanshh_virtual_cursor-1.2.0.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
+
+#### What's New in 1.2.0.0
+- **Added:** - Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick
+- **Added:** - Set Constraint Bounds to Object action: pins rectangular constraint to an object with explicit half-width/height
+- **Added:** - ConstraintCircleObjectUID expression: UID of the circular constraint's tracked object
+- **Added:** - ConstraintBoundsObjectUID expression: UID of the bounds constraint's tracked object
+- **Added:** - ConstraintObjectUID expression: shorthand returning whichever of the above is active
+
+<sub>[View full changelog](#changelog)</sub>
 
 ---
 <b><u>Author:</u></b> SalmanShh <br>
@@ -146,9 +155,11 @@ npm run dev
 | BounceMode | Returns which Bounce type is active as a token: "none", "solids", "constraints", or "both" (solids and constraints). | string |  | 
 | ConstraintAngle | Angle in degrees (0–360) from the circular constraint's center to the cursor. The dial/spin angle. Returns 0 when no circular constraint is active. | number |  | 
 | ConstraintBound | Returns one edge of the active rectangular constraint region. Pass "left", "top", "right", or "bottom". Left and Top return 0, Right and Bottom return the layout size, when no custom bounds are set. | number | Side *(string)* <br> | 
+| ConstraintBoundsObjectUID | UID of the object set via Set Constraint Bounds to Object, or -1. Use with System → Pick by UID to act on it. | number |  | 
 | ConstraintCenter | Returns the X or Y position of the circular constraint's center. Pass "x" or "y". Returns 0 when no circular constraint is active. | number | Axis *(string)* <br> | 
+| ConstraintCircleObjectUID | UID of the object set via Set Circular Constraint to Object, or -1. Use with System → Pick by UID to act on it. | number |  | 
 | ConstraintDistance | Current distance in pixels from the circular constraint's center to the cursor. The pull / draw length. Returns 0 when no circular constraint is active. | number |  | 
-| ConstraintObjectUID | Returns the UID of the object being tracked by whichever object-pinned constraint is active — circular (Set Circular Constraint to Object) is checked first, then rectangular bounds (Set Constraint Bounds to Object). Returns -1 if neither is tracking an object.  | number |  | 
+| ConstraintObjectUID | Shorthand: returns ConstraintCircleObjectUID if set, else ConstraintBoundsObjectUID, else -1. Use when only one object constraint is active at a time. | number |  | 
 | ConstraintPull | How far the cursor is drawn within the constraint band, normalized 0–1 (0 = at Min radius, 1 = at Max radius). Ideal for slingshot/joystick power. Returns 0 when inactive or Min equals Max. | number |  | 
 | ConstraintRadius | Returns the inner or outer radius of the active circular constraint. Pass "min" or "max". Returns 0 when no circular constraint is active. | number | Type *(string)* <br> | 
 | ConstraintRevolutions | Accumulated rotation expressed as full turns (ConstraintRotation / 360) — signed and fractional, e.g. 1.5 = one and a half turns one way, -3 = three turns the other. Ideal for 'spin N times to unlock' checks. Zero it with Reset Circular Rotation. | number |  | 
@@ -157,6 +168,13 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.2.0.0**
+- **Added:** - Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick
+- **Added:** - Set Constraint Bounds to Object action: pins rectangular constraint to an object with explicit half-width/height
+- **Added:** - ConstraintCircleObjectUID expression: UID of the circular constraint's tracked object
+- **Added:** - ConstraintBoundsObjectUID expression: UID of the bounds constraint's tracked object
+- **Added:** - ConstraintObjectUID expression: shorthand returning whichever of the above is active
 
 **1.1.2.0**
 

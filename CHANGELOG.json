@@ -68,5 +68,10 @@
     "added": "",
     "changed": "",
     "fixed": ""
+  },
+  "1.2.0.0": {
+    "added": "- Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick\n- Set Constraint Bounds to Object action: pins rectangular constraint to an object with explicit half-width/height\n- ConstraintCircleObjectUID expression: UID of the circular constraint's tracked object\n- ConstraintBoundsObjectUID expression: UID of the bounds constraint's tracked object\n- ConstraintObjectUID expression: shorthand returning whichever of the above is active",
+    "changed": "",
+    "fixed": ""
   }
 }

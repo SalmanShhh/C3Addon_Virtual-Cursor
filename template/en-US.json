@@ -823,6 +823,11 @@
               }
             }
           },
+          "ConstraintBoundsObjectUID": {
+            "translated-name": "ConstraintBoundsObjectUID",
+            "description": "UID of the object set via Set Constraint Bounds to Object, or -1. Use with System → Pick by UID to act on it.",
+            "params": {}
+          },
           "ConstraintCenter": {
             "translated-name": "ConstraintCenter",
             "description": "Returns the X or Y position of the circular constraint's center. Pass \"x\" or \"y\". Returns 0 when no circular constraint is active.",
@@ -833,6 +838,11 @@
               }
             }
           },
+          "ConstraintCircleObjectUID": {
+            "translated-name": "ConstraintCircleObjectUID",
+            "description": "UID of the object set via Set Circular Constraint to Object, or -1. Use with System → Pick by UID to act on it.",
+            "params": {}
+          },
           "ConstraintDistance": {
             "translated-name": "ConstraintDistance",
             "description": "Current distance in pixels from the circular constraint's center to the cursor. The pull / draw length. Returns 0 when no circular constraint is active.",
@@ -840,7 +850,7 @@
           },
           "ConstraintObjectUID": {
             "translated-name": "ConstraintObjectUID",
-            "description": "Returns the UID of the object being tracked by whichever object-pinned constraint is active — circular (Set Circular Constraint to Object) is checked first, then rectangular bounds (Set Constraint Bounds to Object). Returns -1 if neither is tracking an object. ",
+            "description": "Shorthand: returns ConstraintCircleObjectUID if set, else ConstraintBoundsObjectUID, else -1. Use when only one object constraint is active at a time.",
             "params": {}
           },
           "ConstraintPull": {
