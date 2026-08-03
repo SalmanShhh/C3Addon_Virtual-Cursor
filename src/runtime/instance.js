@@ -587,6 +587,16 @@ export default function (parentClass) {
      * feel: each frame the cursor is pulled to wherever the input put it, and if
      * that lands on a target's collision it locks onto it; otherwise it's free.
      */
+    /**
+     * Single entry point for changing position ownership: the Set Position Control ACE, the
+     * debugger row and any external addon all go through here rather than assigning the field, so
+     * anything that must happen on a handover has one place to live.
+     * @param {boolean} owns - true to drive the position from this behaviour, false to hand it over
+     */
+    _setPositionOwnership(owns) {
+      this._ownsPosition = !!owns;
+    }
+
     _tick2() {
       // Snap-on-collision teleports the instance, so it is a position write too.
       if (!this._enabled || !this._ownsPosition) return;
@@ -1289,7 +1299,7 @@ export default function (parentClass) {
         title: "$" + this.behaviorType.name,
         properties: [
           { name: "$Enabled",         value: this._enabled,         onedit: v => this._enabled         = v },
-          { name: "$OwnsPosition",    value: this._ownsPosition,    onedit: v => this._ownsPosition    = v },
+          { name: "$OwnsPosition",    value: this._ownsPosition,    onedit: v => this._setPositionOwnership(v) },
           { name: "$DefaultControls", value: this._defaultControls, onedit: v => this._defaultControls = v },
           { name: "$DirectionMode",   value: DIR_LABELS[this._directionMode] ?? this._directionMode },
           { name: "$AllowSliding",    value: this._allowSliding,    onedit: v => this._allowSliding    = v },

@@ -1,16 +1,16 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.2.1.0
+### Version 1.2.2.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.2.1.0.c3addon/salmanshh_virtual_cursor-1.2.1.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.2.2.0.c3addon/salmanshh_virtual_cursor-1.2.2.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.2.1.0
-- **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.
-- **Changed:** - Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
-- **Fixed:** - No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
+#### What's New in 1.2.2.0
+- **Added:** - Set Position Control action + Has Position Control condition, so a Tween, UI transition or another addon can borrow the object's position and hand it back. Debugger gains an Owns Position row.
+- **Changed:** - Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load. Ownership now flips through one _setPositionOwnership() setter (ACE, debugger, external addons) instead of assigning the field directly
+- **Fixed:** No more tug of war when another system moves the cursor: while control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge.
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -168,6 +168,11 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.2.2.0**
+- **Added:** - Set Position Control action + Has Position Control condition, so a Tween, UI transition or another addon can borrow the object's position and hand it back. Debugger gains an Owns Position row.
+- **Changed:** - Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load. Ownership now flips through one _setPositionOwnership() setter (ACE, debugger, external addons) instead of assigning the field directly
+- **Fixed:** No more tug of war when another system moves the cursor: while control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge.
 
 **1.2.1.0**
 - **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.

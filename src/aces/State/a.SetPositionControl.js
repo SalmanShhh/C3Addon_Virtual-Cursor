@@ -20,5 +20,5 @@ export const expose = true;
 
 export default function (owner) {
   // Combo: 0 = Behavior (owns position), 1 = External (hands it over)
-  this._ownsPosition = owner === 0;
+  this._setPositionOwnership(owner === 0);
 }

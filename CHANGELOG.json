@@ -78,5 +78,10 @@
     "added": "- Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.",
     "changed": "- Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.",
     "fixed": "- No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)"
+  },
+  "1.2.2.0": {
+    "added": "- Set Position Control action + Has Position Control condition, so a Tween, UI transition or another addon can borrow the object's position and hand it back. Debugger gains an Owns Position row.",
+    "changed": "- Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load. Ownership now flips through one _setPositionOwnership() setter (ACE, debugger, external addons) instead of assigning the field directly ",
+    "fixed": "No more tug of war when another system moves the cursor: while control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge."
   }
 }
