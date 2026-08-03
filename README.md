@@ -9,8 +9,8 @@
 
 #### What's New in 1.2.1.0
 - **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.
-- **Changed:** Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
-- **Fixed:** No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
+- **Changed:** - Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
+- **Fixed:** - No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -171,8 +171,8 @@ npm run dev
 
 **1.2.1.0**
 - **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.
-- **Changed:** Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
-- **Fixed:** No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
+- **Changed:** - Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
+- **Fixed:** - No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
 
 **1.2.0.0**
 - **Added:** - Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick
