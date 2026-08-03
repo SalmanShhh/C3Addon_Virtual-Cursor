@@ -571,6 +571,21 @@
                 }
               }
             }
+          },
+          "SetPositionControl": {
+            "list-name": "Set Position Control",
+            "display-text": "{my}: Set position control {0}",
+            "description": "Sets whether this behavior controls the object's position, or hands control to another system such as a Tween. Movement state is kept, so switching back resumes from the object's current position.",
+            "params": {
+              "owner": {
+                "name": "Controlled by",
+                "desc": "Behavior = this behavior sets the position each tick; External = another system does",
+                "items": {
+                  "behavior": "Behavior",
+                  "external": "External"
+                }
+              }
+            }
           }
         },
         "conditions": {
@@ -664,6 +679,12 @@
             "list-name": "On Solid Hit",
             "display-text": "{my}: On Solid Hit",
             "description": "Fires when the cursor collides with a solid object and is pushed out.",
+            "params": {}
+          },
+          "HasPositionControl": {
+            "list-name": "Has Position Control",
+            "display-text": "{my}: Has position control",
+            "description": "True if this behavior is currently controlling the object's position, as set by Set Position Control. Invert to run logic only while another system is moving the object.",
             "params": {}
           },
           "IsCircularConstraintActive": {

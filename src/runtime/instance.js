@@ -89,6 +89,22 @@ export default function (parentClass) {
       // Toggled by Set Ignoring Input; queried by Is Ignoring Input.
       this._ignoringInput = false;
 
+      // ── Position ownership ────────────────────────────────────────────────
+      // True (default) while this behaviour drives its instance's position: it
+      // integrates velocity, pushes out of solids and clamps to its constraints
+      // every tick. Set false to hand the position to something else — a UI
+      // transition sliding the cursor in, a Tween, a cutscene camera. While
+      // false the behaviour writes no position at all, so the external mover is
+      // not fought and the cursor cannot end up pinned against a constraint
+      // edge; state is kept, so reclaiming control resumes from wherever the
+      // instance now is.
+      //
+      // Also a cross-addon contract: `_ownsPosition` is the duck-typed flag other
+      // addons read off `inst.behaviors[...]` to know they must leave this
+      // instance's position alone (UIDirector honours it when animating layers).
+      // Toggled by Set Position Control; queried by Has Position Control.
+      this._ownsPosition = true;
+
       // ── Set Position velocity derivation ──────────────────────────────────
       // Set Position teleports the object but also derives a velocity from the
       // move so VelocityX/Y, Speed, MovingAngle and Is Moving reflect it. We
@@ -353,11 +369,16 @@ export default function (parentClass) {
       this._setPosWasCalledLastTick = this._setPosCalledThisTick;
       this._setPosCalledThisTick    = false;
 
-      if (!this._enabled) {
+      if (!this._enabled || !this._ownsPosition) {
         // A disabled cursor isn't moving — clear the reported velocity so
         // Is Moving / Speed / VelocityX/Y / MovingAngle don't report stale
         // motion while frozen. Covers every disable path (action, debugger,
         // property) since they all funnel through this early-out.
+        //
+        // Position control released takes the same path: writing nothing at all
+        // is what lets an external mover own the position without a tug of war,
+        // and reporting zero velocity is honest — the cursor is not moving under
+        // its own steam.
         this._reportVelX = 0;
         this._reportVelY = 0;
         return;
@@ -567,7 +588,8 @@ export default function (parentClass) {
      * that lands on a target's collision it locks onto it; otherwise it's free.
      */
     _tick2() {
-      if (!this._enabled) return;
+      // Snap-on-collision teleports the instance, so it is a position write too.
+      if (!this._enabled || !this._ownsPosition) return;
       if (this._homingMode !== HOMING_MODE_SNAP_COLLISION) return;
 
       const prevInRange = this._inHomingRange;
@@ -1267,6 +1289,7 @@ export default function (parentClass) {
         title: "$" + this.behaviorType.name,
         properties: [
           { name: "$Enabled",         value: this._enabled,         onedit: v => this._enabled         = v },
+          { name: "$OwnsPosition",    value: this._ownsPosition,    onedit: v => this._ownsPosition    = v },
           { name: "$DefaultControls", value: this._defaultControls, onedit: v => this._defaultControls = v },
           { name: "$DirectionMode",   value: DIR_LABELS[this._directionMode] ?? this._directionMode },
           { name: "$AllowSliding",    value: this._allowSliding,    onedit: v => this._allowSliding    = v },
@@ -1305,6 +1328,10 @@ export default function (parentClass) {
      * @param {object} o - The object returned by _saveToJson()
      */
     _loadFromJson(o) {
+      // Position control is transient, like velocity: if the game was saved while
+      // another system had borrowed the position, the cursor must not come back
+      // permanently frozen with nothing left to hand control back.
+      this._ownsPosition = true;
       this._velX  = 0;
       this._velY  = 0;
       this._reportVelX = 0;

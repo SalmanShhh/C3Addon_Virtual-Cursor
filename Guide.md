@@ -118,6 +118,25 @@ Event: On start of layout
   Action: Virtual Cursor -> Set Direction Mode 4 Directions
 ```
 
+### Handing position control to another system
+
+By default the behavior owns the object's position: every tick it integrates velocity, pushes out of solids, applies homing and clamps to the constraints. When something else needs to move the object — a Tween, a Sine behavior, a scripted UI transition, another addon — the two fight over the position, and the cursor can end up stuttering or pinned against a constraint edge.
+
+**Set Position Control External** stops the behavior writing the position at all, so the other system moves the object cleanly. Movement state is kept, so **Set Position Control Behavior** picks up again from wherever the object ended up. **Has Position Control** reports which side currently owns it, so your own event logic can stand down during the handover.
+
+```text
+Event: On menu open
+  Action: Virtual Cursor -> Set Position Control External          // the Tween owns the position now
+  Action: Cursor -> Tween "pos" to (MenuAnchor.X, MenuAnchor.Y) in 0.4 seconds
+
+Event: Cursor -> On Tween "pos" finished
+  Action: Virtual Cursor -> Set Position Control Behavior          // resumes from where the Tween left it
+```
+
+While control is External the cursor reports no motion of its own — Speed and VelocityX/Y read 0 and **Is Moving** is false — because the behavior is not moving it. Position control is also reset to Behavior on load, so a game saved mid-handover cannot come back frozen.
+
+**Set Ignoring Input vs Set Position Control:** Set Ignoring Input freezes the *input* — the behavior still owns the position, so the cursor coasts to a stop, stays inside its constraints and is still pushed out of solids. Set Position Control External releases the *position itself*, which is what you want when another system is doing the moving.
+
 ## 6. Input and Interact Events
 
 The Input category gives you named interact buttons that work independently of the movement axis. This is useful for one object that needs many different event triggers, such as a cursor that selects, grabs, or confirms.
@@ -319,6 +338,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
 | Set Ignoring Input | Freezes all movement input — arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
+| Set Position Control | Chooses whether the behavior controls the object's position (Behavior) or hands it to another system such as a Tween (External). While External the behavior writes no position — no velocity, push-out, homing or clamping — and movement state is kept, so switching back resumes from the object's current position. |
 | Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
 | Set Circular Constraint | Confines the cursor to a ring band around a center point (raw X, Y). Min = Max locks it to a ring to spin (dials, wheels, cranks); Min = 0 makes a pull disc (slingshot, joystick). |
 | Set Circular Constraint to Object | Same as above but takes an object instead of X, Y — the center tracks the object's position automatically every tick. |
@@ -360,6 +380,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | On Bounce | Triggers when the cursor reflects off a surface it's set to bounce on (solid, custom object, or constraint edge). Fires once per tick. |
 | Is Hovering | Returns true while the cursor is over an instance of the given object (per the Hover Detection mode). When several overlap, the front-most (top-layered) one is recorded in HoveredUID. Hidden instances and instances on hidden layers are ignored. |
 | Is Ignoring Input | Returns true while movement input is frozen (set via Set Ignoring Input). |
+| Has Position Control | Returns true while the behavior is controlling the object's position, false while another system has it (set via Set Position Control). Invert it to run logic only during an external takeover. |
 | Is Circular Constraint Active | Returns true while a circular constraint is set. |
 | On Circular Edge Hit | Triggers when the cursor first reaches the circular constraint's edge — filterable by Outer (max radius), Inner (min radius), or Any. |
 
@@ -1046,6 +1067,60 @@ Event: On load game
       Action: Vault -> Set animation "Open"
     ```
 
+50. **Menu cursor that slides in on a Tween**  
+    **Scenario:** When a menu opens, the cursor should glide to its first entry under a Tween, then hand control back and steer normally from there. Releasing position control keeps the behavior from fighting the Tween or dragging the cursor back to a constraint edge.  
+    **Event sheet:**
+    ```text
+    Event: On menu open
+      Action: Virtual Cursor -> Set Position Control External
+      Action: Cursor -> Tween "pos" to (FirstEntry.X, FirstEntry.Y) in 0.4 seconds
+
+    Event: Cursor -> On Tween "pos" finished
+      Action: Virtual Cursor -> Set Position Control Behavior      // resumes from the entry it landed on
+    ```
+
+51. **Cutscene path that returns control cleanly**  
+    **Scenario:** A cutscene walks the cursor along scripted waypoints, then gives it back to the player wherever the path ended. Unlike Set Ignoring Input, this also suspends solid push-out and constraint clamping, so the scripted path can cross a wall or leave the clamp box without being shoved back.  
+    **Event sheet:**
+    ```text
+    Event: On cutscene start
+      Action: Virtual Cursor -> Set Position Control External
+
+    Event: System -> CutscenePlaying = 1
+      Action: Cursor -> Set position to (PathNode.X, PathNode.Y)
+
+    Event: On cutscene end
+      Action: Virtual Cursor -> Set Position Control Behavior
+    ```
+
+52. **Steering logic that stands down during a takeover**  
+    **Scenario:** Your own event sheet drives the cursor every tick, but you don't want it competing with whatever borrowed the position. Gate the driving events on Has Position Control, and use the inverted condition to run takeover-only logic such as dimming the reticle.  
+    **Event sheet:**
+    ```text
+    Event: Every tick
+        Condition: Virtual Cursor -> Has Position Control
+      Action: Virtual Cursor -> Simulate Axis (InputAxisX, InputAxisY)
+      Action: Reticle -> Set opacity 100
+
+    Event: Every tick
+        Condition: Virtual Cursor -> [X] Has Position Control      // inverted: another system is moving it
+      Action: Reticle -> Set opacity 40
+    ```
+
+53. **Drag-and-drop that borrows the cursor**  
+    **Scenario:** While an item is being dragged, a snapping routine places the cursor on the nearest grid slot instead of letting the behavior clamp and push it around. Control goes back on release, and the cursor carries on from the slot it snapped to.  
+    **Event sheet:**
+    ```text
+    Event: Virtual Cursor -> On Interact Pressed "grab"
+      Action: Virtual Cursor -> Set Position Control External
+
+    Event: Virtual Cursor -> Is Interact Held "grab"
+      Action: Cursor -> Set position to (NearestSlot.X, NearestSlot.Y)
+
+    Event: Virtual Cursor -> On Interact Released "grab"
+      Action: Virtual Cursor -> Set Position Control Behavior
+    ```
+
 ## 15. Other Game Use Cases
 
 - **Platformer**: Use the cursor as a hover pointer for item selection and menu control, not as the main player avatar.
@@ -1091,6 +1166,9 @@ Event: On load game
 - **Slingshot / catapult**: Constrain to a disc (Min = 0); read ConstraintPull for power and ConstraintAngle for aim, then fire on the interact release.
 - **On-screen analog stick**: A knob constrained to a disc feeds ConstraintAngle and ConstraintPull into player movement for twin-stick or mobile controls.
 - **Crank / winch mechanic**: A reel locked to a ring uses ConstraintRevolutions to reel in a line, raise a drawbridge, or wind a spring.
+- **Menu and HUD transitions**: Hand the position to a Tween with Set Position Control External while a panel slides in, then take it back so steering resumes from the new spot.
+- **Cutscene or scripted path**: Release position control so a waypoint path can move the cursor freely, past walls and outside the clamp box, without the behavior pulling it back.
+- **Mixed control schemes**: Gate your own per-tick driving events on Has Position Control so they stand down whenever another system or addon borrows the object.
 
 ## 16. Debugger
 
@@ -1098,7 +1176,7 @@ The debugger shows live values for the behavior so you can tune movement without
 
 The main debugger view shows:
 
-- Enabled and Default Controls
+- Enabled, Owns Position, and Default Controls
 - Direction Mode and Allow Sliding
 - Max Speed, Acceleration, and Deceleration
 - Current speed, velocity, and axis values
@@ -1113,5 +1191,7 @@ The main debugger view shows:
 - If you want the cursor to stop on walls, set Allow Sliding to false.
 - If you want arrow keys to be active, keep Default Controls enabled or toggle it from the event sheet.
 - If a target is no longer valid, remove it from the homing list before it causes stale state.
+- Always pair a Set Position Control External with a Set Position Control Behavior on the matching end trigger. Left External, the cursor never moves under its own steam again — the Owns Position row in the debugger is the quickest way to spot it.
+- Reach for Set Position Control when another system moves the object, and Set Ignoring Input when you only want to freeze the player's input while the behavior keeps clamping and colliding.
 - Use MovingAngle when you need bullets, effects, or AI to face the cursor’s current motion direction rather than its sprite orientation.
 - The current ACE set is script-friendly, so you can read motion state from JavaScript or mix event-sheet logic with custom runtime code.

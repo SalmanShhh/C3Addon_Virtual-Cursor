@@ -1,18 +1,16 @@
 <img src="./src/icon.svg" width="100" /><br>
 # Virtual Cursor
 <i>Turns any world object into a controllable cursor with event-driven movement, Homing/Snapping magnet, solids, and interact input, that supports All Inputs e.g gamepad, touch, mouse, and keyboard.</i> <br>
-### Version 1.2.0.0
+### Version 1.2.1.0
 
-[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.2.0.0.c3addon/salmanshh_virtual_cursor-1.2.0.0.c3addon)
+[<img src="https://placehold.co/200x50/4493f8/FFF?text=Download&font=montserrat" width="200"/>](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases/download/salmanshh_virtual_cursor-1.2.1.0.c3addon/salmanshh_virtual_cursor-1.2.1.0.c3addon)
 <br>
 <sub> [See all releases](https://github.com/SalmanShhh/C3Addon_Virtual-Cursor/releases) </sub> <br>
 
-#### What's New in 1.2.0.0
-- **Added:** - Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick
-- **Added:** - Set Constraint Bounds to Object action: pins rectangular constraint to an object with explicit half-width/height
-- **Added:** - ConstraintCircleObjectUID expression: UID of the circular constraint's tracked object
-- **Added:** - ConstraintBoundsObjectUID expression: UID of the bounds constraint's tracked object
-- **Added:** - ConstraintObjectUID expression: shorthand returning whichever of the above is active
+#### What's New in 1.2.1.0
+- **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.
+- **Changed:** Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
+- **Fixed:** No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
 
 <sub>[View full changelog](#changelog)</sub>
 
@@ -105,6 +103,7 @@ npm run dev
 | Set Direction Mode | Limits the axes the cursor can move along. Up & Down disables horizontal movement; Left & Right disables vertical movement; 4 Directions snaps to the dominant axis per tick; 8 Directions allows full free movement. | Mode             *(combo)* <br> |
 | Set Enabled | Enables or disables the Virtual Cursor behavior. | Enabled             *(boolean)* <br> |
 | Set Ignoring Input | When enabled, all movement input is ignored — arrow keys are not read and every Simulate action (Simulate Control / Axis / Mouse / Direct Mouse Position / Interact) does nothing. The cursor coasts to a stop while still ticking; direct drives like Set Position and Set Velocity still work. Use it to freeze input for cutscenes or menus. | State             *(combo)* <br> |
+| Set Position Control | Sets whether this behavior controls the object's position, or hands control to another system such as a Tween. Movement state is kept, so switching back resumes from the object's current position. | Controlled by             *(combo)* <br> |
 
 
 ---
@@ -123,6 +122,7 @@ npm run dev
 | On Layout Edge Hit | Fires when the cursor hits the layout boundary while constrained. |  |
 | Is Blocked | True if the cursor was pushed out of a solid object this tick. |  |
 | On Solid Hit | Fires when the cursor collides with a solid object and is pushed out. |  |
+| Has Position Control | True if this behavior is currently controlling the object's position, as set by Set Position Control. Invert to run logic only while another system is moving the object. |  |
 | Is Circular Constraint Active | True while a circular constraint is set (via Set Circular Constraint). |  |
 | Is Enabled | True if the Virtual Cursor behavior is currently active. |  |
 | Is Ignoring Input | True while movement input is being ignored (set via Set Ignoring Input). |  |
@@ -168,6 +168,11 @@ npm run dev
 
 ---
 ## Changelog
+
+**1.2.1.0**
+- **Added:** - Set Position Control action and Has Position Control condition, letting a Tween, UI transition, cutscene path or another addon take over the object's position and hand it back. Debugger gains an Owns Position row.
+- **Changed:** Movement state survives a handover, so switching back resumes from the object's current position. Reported velocity reads zero while External, and control always restores to Behavior on load.
+- **Fixed:** No more tug-of-war when another system moves the cursor. While control is External the behavior writes no position, so scripted moves can't stutter or leave the cursor pinned to a constraint edge. (used for WIP UI related Addons)
 
 **1.2.0.0**
 - **Added:** - Set Circular Constraint to Object action: pins circular constraint to an object, auto-tracks each tick
