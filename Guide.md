@@ -120,7 +120,7 @@ Event: On start of layout
 
 ### Handing position control to another system
 
-By default the behavior owns the object's position: every tick it integrates velocity, pushes out of solids, applies homing and clamps to the constraints. When something else needs to move the object — a Tween, a Sine behavior, a scripted UI transition, another addon — the two fight over the position, and the cursor can end up stuttering or pinned against a constraint edge.
+By default the behavior owns the object's position: every tick it integrates velocity, pushes out of solids, applies homing and clamps to the constraints. When something else needs to move the object, such as a Tween, a Sine behavior, a scripted UI transition or another addon, the two fight over the position, and the cursor can end up stuttering or pinned against a constraint edge.
 
 **Set Position Control External** stops the behavior writing the position at all, so the other system moves the object cleanly. Movement state is kept, so **Set Position Control Behavior** picks up again from wherever the object ended up. **Has Position Control** reports which side currently owns it, so your own event logic can stand down during the handover.
 
@@ -133,9 +133,9 @@ Event: Cursor -> On Tween "pos" finished
   Action: Virtual Cursor -> Set Position Control Behavior          // resumes from where the Tween left it
 ```
 
-While control is External the cursor reports no motion of its own — Speed and VelocityX/Y read 0 and **Is Moving** is false — because the behavior is not moving it. Position control is also reset to Behavior on load, so a game saved mid-handover cannot come back frozen.
+While control is External the cursor reports no motion of its own: Speed and VelocityX/Y read 0 and **Is Moving** is false, because the behavior is not moving it. Position control is also reset to Behavior on load, so a game saved mid-handover cannot come back frozen.
 
-**Set Ignoring Input vs Set Position Control:** Set Ignoring Input freezes the *input* — the behavior still owns the position, so the cursor coasts to a stop, stays inside its constraints and is still pushed out of solids. Set Position Control External releases the *position itself*, which is what you want when another system is doing the moving.
+**Set Ignoring Input vs Set Position Control:** Set Ignoring Input freezes the *input*. The behavior still owns the position, so the cursor coasts to a stop, stays inside its constraints and is still pushed out of solids. Set Position Control External releases the *position itself*, which is what you want when another system is doing the moving.
 
 ## 6. Input and Interact Events
 
@@ -202,7 +202,7 @@ Event: On start of layout
 
 ### Rectangular constraint around an object
 
-**Set Constraint Bounds to Object** confines the cursor to a rectangle centered on a specific object, tracking its position every tick automatically. The Half Width and Half Height parameters set how far the cursor may stray from the object's center in each direction — so `(SafePanel, 120, 80)` creates a 240×160 zone that follows SafePanel wherever it moves.
+**Set Constraint Bounds to Object** confines the cursor to a rectangle centered on a specific object, tracking its position every tick automatically. The Half Width and Half Height parameters set how far the cursor may stray from the object's center in each direction, so `(SafePanel, 120, 80)` creates a 240×160 zone that follows SafePanel wherever it moves.
 
 Use **ConstraintBoundsObjectUID** to pick the tracked object back in events (e.g. to highlight the active zone or apply effects to the correct panel):
 
@@ -221,10 +221,10 @@ To clear the object-tracked bounds and restore full-layout clamping, call **Set 
 
 Beyond the rectangular clamp, **Set Circular Constraint** (center X, Y, min radius, max radius) confines the cursor to a ring band around a center point. This drives two families of mini-game:
 
-- **Spin** (Min = Max): the cursor is pinned to a ring and can only orbit the center — dials, knobs, steering wheels, reel cranks. Read **ConstraintAngle** for the dial angle.
-- **Pull** (Min = 0): the cursor roams a disc and snaps back to the rim past Max — slingshots, analog sticks, charge meters. Read **ConstraintPull** (0–1) for power and **ConstraintAngle** for aim.
+- **Spin** (Min = Max): the cursor is pinned to a ring and can only orbit the center: dials, knobs, steering wheels, reel cranks. Read **ConstraintAngle** for the dial angle.
+- **Pull** (Min = 0): the cursor roams a disc and snaps back to the rim past Max: slingshots, analog sticks, charge meters. Read **ConstraintPull** (0–1) for power and **ConstraintAngle** for aim.
 
-**Set Circular Constraint to Object** is the preferred alternative when the center should follow a specific object. It takes the object directly instead of raw X, Y coordinates, and tracks its position automatically every tick — no need to update the center manually. Use **ConstraintCircleObjectUID** to pick the same object back in events (e.g. to rotate the dial to ConstraintAngle, or to apply a visual effect to the correct safe):
+**Set Circular Constraint to Object** is the preferred alternative when the center should follow a specific object. It takes the object directly instead of raw X, Y coordinates, and tracks its position automatically every tick, with no need to update the center manually. Use **ConstraintCircleObjectUID** to pick the same object back in events (e.g. to rotate the dial to ConstraintAngle, or to apply a visual effect to the correct safe):
 
 ```text
 Event: On start of layout
@@ -237,9 +237,9 @@ Every tick:
 
 **On Circular Edge Hit** fires when the cursor reaches the inner or outer edge.
 
-While a circular constraint is active the cursor's rotation around the center is tracked automatically: **ConstraintRotation** sums the signed degrees turned (unbounded — 360 per full turn, negative for the other direction) and **ConstraintRevolutions** reports the same as full turns. Wrap-around past 0°/360° is handled, so this is the reliable way to build spin-to-unlock dials and combination locks without tracking the previous angle yourself. **Reset Circular Rotation** zeroes the counter — call it when a challenge starts or between combination-lock stages.
+While a circular constraint is active the cursor's rotation around the center is tracked automatically: **ConstraintRotation** sums the signed degrees turned (unbounded, 360 per full turn, negative for the other direction) and **ConstraintRevolutions** reports the same as full turns. Wrap-around past 0°/360° is handled, so this is the reliable way to build spin-to-unlock dials and combination locks without tracking the previous angle yourself. **Reset Circular Rotation** zeroes the counter. Call it when a challenge starts or between combination-lock stages.
 
-**Set Circular Return** makes the cursor spring back to a rest position the moment the player stops steering or dragging it — auto-centering. For a pull disc (Min = 0) it snaps back to the center/origin (an analog stick returning to neutral); for a ring or dial it eases to a home angle (a self-centering steering wheel). The strength controls how snappy the return feels; 0 disables it. The player's own input always wins while active — the spring only takes over once they let go.
+**Set Circular Return** makes the cursor spring back to a rest position the moment the player stops steering or dragging it, giving auto-centering. For a pull disc (Min = 0) it snaps back to the center/origin (an analog stick returning to neutral); for a ring or dial it eases to a home angle (a self-centering steering wheel). The strength controls how snappy the return feels; 0 disables it. The player's own input always wins while active; the spring only takes over once they let go.
 
 ```text
 Event: On start of layout
@@ -297,7 +297,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 
 | Action | Description |
 |---|---|
-| Set Position _(deprecated)_ | Teleports the cursor to an exact X and Y location. Deprecated — use Simulate Direct Mouse Position instead. |
+| Set Position _(deprecated)_ | Teleports the cursor to an exact X and Y location. Deprecated: use Simulate Direct Mouse Position instead. |
 | Set Velocity | Applies an instant velocity vector. |
 | Stop Movement | Forces the cursor to halt. |
 | Set Max Speed | Changes the top speed of the cursor. |
@@ -337,14 +337,14 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Set Constraint Bounds to Object | Confines the cursor to a rectangle centered on a picked object, tracking its position automatically. Half Width/Height set how far the cursor may move from the object's center. |
 | Set Direction Mode | Changes the allowed movement axes. |
 | Set Default Controls | Enables or disables arrow-key input. |
-| Set Ignoring Input | Freezes all movement input — arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
-| Set Position Control | Chooses whether the behavior controls the object's position (Behavior) or hands it to another system such as a Tween (External). While External the behavior writes no position — no velocity, push-out, homing or clamping — and movement state is kept, so switching back resumes from the object's current position. |
-| Set Bounce | Chooses which surfaces the cursor reflects off — None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
+| Set Ignoring Input | Freezes all movement input: arrow keys and every Simulate action no-op (cursor coasts to a stop). Direct Set Position/Velocity still work. For cutscenes/menus. |
+| Set Position Control | Chooses whether the behavior controls the object's position (Behavior) or hands it to another system such as a Tween (External). While External the behavior writes no position (no velocity, push-out, homing or clamping) and movement state is kept, so switching back resumes from the object's current position. |
+| Set Bounce | Chooses which surfaces the cursor reflects off: None, Solids Only, Constraints Only, or Solids and Constraints (lossless bounce, like the Bullet behavior). |
 | Set Circular Constraint | Confines the cursor to a ring band around a center point (raw X, Y). Min = Max locks it to a ring to spin (dials, wheels, cranks); Min = 0 makes a pull disc (slingshot, joystick). |
-| Set Circular Constraint to Object | Same as above but takes an object instead of X, Y — the center tracks the object's position automatically every tick. |
+| Set Circular Constraint to Object | Same as above but takes an object instead of X, Y, so the center tracks the object's position automatically every tick. |
 | Clear Circular Constraint | Removes the circular constraint so the cursor moves freely again. |
 | Reset Circular Rotation | Zeroes the accumulated rotation counter (ConstraintRotation / ConstraintRevolutions). |
-| Set Circular Return | Springs the cursor back to its rest position when input stops — the center/origin for a disc (analog stick), or a home angle for a ring (self-centering wheel). Strength 0 disables. |
+| Set Circular Return | Springs the cursor back to its rest position when input stops: the center/origin for a disc (analog stick), or a home angle for a ring (self-centering wheel). Strength 0 disables. |
 
 ### Hover
 
@@ -382,7 +382,7 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | Is Ignoring Input | Returns true while movement input is frozen (set via Set Ignoring Input). |
 | Has Position Control | Returns true while the behavior is controlling the object's position, false while another system has it (set via Set Position Control). Invert it to run logic only during an external takeover. |
 | Is Circular Constraint Active | Returns true while a circular constraint is set. |
-| On Circular Edge Hit | Triggers when the cursor first reaches the circular constraint's edge — filterable by Outer (max radius), Inner (min radius), or Any. |
+| On Circular Edge Hit | Triggers when the cursor first reaches the circular constraint's edge, filterable by Outer (max radius), Inner (min radius), or Any. |
 
 ## 12. Expressions Reference
 
@@ -408,13 +408,13 @@ Use a lower smoothing value for a more delayed, floaty feel and a higher value f
 | ConstraintBound("left"/"top"/"right"/"bottom") | Number | One edge of the active rectangular constraint region. Returns 0 / layout size when no custom bounds are set. |
 | ConstraintCenter("x"/"y") | Number | X or Y position of the circular constraint's center. Returns 0 when none active. |
 | ConstraintRadius("min"/"max") | Number | Inner or outer radius of the active circular constraint. Returns 0 when none active. |
-| ConstraintAngle | Number | Angle (degrees, 0–360) from the circular constraint's center to the cursor — the dial/spin angle. |
-| ConstraintDistance | Number | Distance in pixels from the circular constraint's center to the cursor — the pull/draw length. |
+| ConstraintAngle | Number | Angle (degrees, 0–360) from the circular constraint's center to the cursor. This is the dial/spin angle. |
+| ConstraintDistance | Number | Distance in pixels from the circular constraint's center to the cursor. This is the pull/draw length. |
 | ConstraintPull | Number | How far the cursor is drawn within the band, 0–1 (0 = Min radius, 1 = Max radius). |
 | ConstraintCircleObjectUID | Number | UID of the object tracked as the circular constraint center (Set Circular Constraint to Object), or -1. Use with System → Pick by UID to rotate the dial or apply effects to the correct safe. |
 | ConstraintBoundsObjectUID | Number | UID of the object tracked as the rectangular constraint center (Set Constraint Bounds to Object), or -1. Use with System → Pick by UID to highlight the active zone or apply effects to the correct panel. |
 | ConstraintObjectUID | Number | Shorthand: returns ConstraintCircleObjectUID if a circular object constraint is active, otherwise ConstraintBoundsObjectUID, otherwise -1. Use when only one type of object constraint is active at a time. When both are active, use the specific expressions directly. |
-| ConstraintRotation | Number | Total accumulated rotation in degrees around the center while a circular constraint is active (signed, unbounded — 360 = one full turn). |
+| ConstraintRotation | Number | Total accumulated rotation in degrees around the center while a circular constraint is active (signed and unbounded, 360 = one full turn). |
 | ConstraintRevolutions | Number | Accumulated rotation as full turns (ConstraintRotation / 360), signed and fractional. |
 | BounceMode | String | Active Bounce type token: "none", "solids", "constraints", or "both". |
 
@@ -781,7 +781,7 @@ Event: On load game
     ```
 
 30. **Context-sensitive cursor icon**  
-    **Scenario:** You want the cursor art to change with what it is over — a hand over items, a crosshair over enemies, otherwise a default pointer.  
+    **Scenario:** You want the cursor art to change with what it is over: a hand over items, a crosshair over enemies, otherwise a default pointer.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -836,7 +836,7 @@ Event: On load game
     ```
 
 34. **Hold-to-brake precision**  
-    **Scenario:** Tighten stops while a brake button is held by tripling deceleration, then restore the original value — captured with the Deceleration expression.  
+    **Scenario:** Tighten stops while a brake button is held by tripling deceleration, then restore the original value, captured with the Deceleration expression.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -901,7 +901,7 @@ Event: On load game
     ```
 
 39. **Cutscene input freeze**  
-    **Scenario:** During a cutscene the player's cursor should stop responding to all input, then resume afterward — while scripted Set Position moves still work.  
+    **Scenario:** During a cutscene the player's cursor should stop responding to all input, then resume afterward, while scripted Set Position moves still work.  
     **Event sheet:**
     ```text
     Event: On cutscene start
@@ -959,7 +959,7 @@ Event: On load game
     ```
 
 43. **Radial (pie) menu**  
-    **Scenario:** Open a ring menu, lock the cursor to it, and select a wedge from the angle the cursor points at — six options means 60° per wedge.  
+    **Scenario:** Open a ring menu, lock the cursor to it, and select a wedge from the angle the cursor points at, so six options means 60° per wedge.  
     **Event sheet:**
     ```text
     Event: On menu open
@@ -987,7 +987,7 @@ Event: On load game
     ```
 
 45. **Leash that follows a moving anchor**  
-    **Scenario:** Keep the cursor inside a ring band around a moving companion — never closer than 40px, never further than 120px. Set it once and the center tracks the companion automatically.  
+    **Scenario:** Keep the cursor inside a ring band around a moving companion: never closer than 40px, never further than 120px. Set it once and the center tracks the companion automatically.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -995,7 +995,7 @@ Event: On load game
     ```
 
 46. **Fishing reel crank**  
-    **Scenario:** Lock the cursor to a ring so the player cranks it in circles; the behavior tracks how far it has turned automatically, so the line reels in by total turns — no manual angle bookkeeping.  
+    **Scenario:** Lock the cursor to a ring so the player cranks it in circles; the behavior tracks how far it has turned automatically, so the line reels in by total turns, with no manual angle bookkeeping.  
     **Event sheet:**
     ```text
     Event: On start of layout
@@ -1191,7 +1191,7 @@ The main debugger view shows:
 - If you want the cursor to stop on walls, set Allow Sliding to false.
 - If you want arrow keys to be active, keep Default Controls enabled or toggle it from the event sheet.
 - If a target is no longer valid, remove it from the homing list before it causes stale state.
-- Always pair a Set Position Control External with a Set Position Control Behavior on the matching end trigger. Left External, the cursor never moves under its own steam again — the Owns Position row in the debugger is the quickest way to spot it.
+- Always pair a Set Position Control External with a Set Position Control Behavior on the matching end trigger. Left External, the cursor never moves under its own steam again; the Owns Position row in the debugger is the quickest way to spot it.
 - Reach for Set Position Control when another system moves the object, and Set Ignoring Input when you only want to freeze the player's input while the behavior keeps clamping and colliding.
 - Use MovingAngle when you need bullets, effects, or AI to face the cursor’s current motion direction rather than its sprite orientation.
 - The current ACE set is script-friendly, so you can read motion state from JavaScript or mix event-sheet logic with custom runtime code.
